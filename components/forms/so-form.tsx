@@ -1,0 +1,119 @@
+"use client";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Trash2, Plus } from "lucide-react";
+import { formatNzd } from "@/lib/utils";
+import { upsertSalesOrder } from "@/actions/sales-orders";
+
+type Line = { productId: string; qtyOrdered: number };
+type Product = { id: string; sku: string; name: string; sellPriceNzd: number; stock: number };
+
+export function SoForm({
+  customers,
+  products,
+}: {
+  customers: { id: string; name: string }[];
+  products: Product[];
+}) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [customerId, setCustomerId] = useState("");
+  const [notes, setNotes] = useState("");
+  const [lines, setLines] = useState<Line[]>([{ productId: "", qtyOrdered: 1 }]);
+  const productMap = Object.fromEntries(products.map((p) => [p.id, p]));
+
+  const subtotal = lines.reduce((s, l) => {
+    const p = productMap[l.productId];
+    return s + (p ? p.sellPriceNzd * l.qtyOrdered : 0);
+  }, 0);
+  const gst = subtotal * 0.15;
+  const total = subtotal + gst;
+
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        start(async () => {
+          const res = await upsertSalesOrder({
+            customerId,
+            notes,
+            lines: lines.filter((l) => l.productId),
+          });
+          if (!res.ok) return toast.error(res.error);
+          toast.success("SO saved");
+          router.push(`/sales-orders/${res.data.id}`);
+          router.refresh();
+        });
+      }}
+    >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Customer</Label>
+          <Select value={customerId} onValueChange={setCustomerId}>
+            <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
+            <SelectContent>{customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Lines</Label>
+        <div className="rounded-md border">
+          <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs text-muted-foreground border-b">
+            <div className="col-span-6">Product</div>
+            <div className="col-span-2 text-right">Stock</div>
+            <div className="col-span-2 text-right">Qty</div>
+            <div className="col-span-1 text-right">Line</div>
+            <div className="col-span-1"></div>
+          </div>
+          {lines.map((l, i) => {
+            const p = productMap[l.productId];
+            return (
+              <div key={i} className="grid grid-cols-12 gap-2 px-3 py-2 border-b last:border-0 items-center">
+                <div className="col-span-6">
+                  <Select value={l.productId} onValueChange={(v) => setLines((xs) => xs.map((x, idx) => idx === i ? { ...x, productId: v } : x))}>
+                    <SelectTrigger><SelectValue placeholder="Select product" /></SelectTrigger>
+                    <SelectContent>
+                      {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.sku} — {p.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="col-span-2 text-right text-sm text-muted-foreground">{p?.stock ?? "—"}</div>
+                <div className="col-span-2">
+                  <Input type="number" className="text-right" value={l.qtyOrdered}
+                    onChange={(e) => setLines((xs) => xs.map((x, idx) => idx === i ? { ...x, qtyOrdered: Number(e.target.value) } : x))} />
+                </div>
+                <div className="col-span-1 text-right text-sm">{p ? formatNzd(p.sellPriceNzd * l.qtyOrdered) : "—"}</div>
+                <div className="col-span-1 text-right">
+                  <Button type="button" variant="ghost" size="icon" onClick={() => setLines((xs) => xs.filter((_, idx) => idx !== i))}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={() => setLines((xs) => [...xs, { productId: "", qtyOrdered: 1 }])}>
+          <Plus className="h-4 w-4 mr-1" /> Add line
+        </Button>
+      </div>
+
+      <div className="space-y-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+
+      <div className="flex justify-end gap-6 text-sm pt-2 border-t">
+        <div>Subtotal {formatNzd(subtotal)}</div>
+        <div>GST (15%) {formatNzd(gst)}</div>
+        <div className="text-lg font-semibold">Total {formatNzd(total)}</div>
+      </div>
+
+      <Button type="submit" disabled={pending || !customerId}>{pending ? "Saving..." : "Save SO"}</Button>
+    </form>
+  );
+}

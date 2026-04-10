@@ -1,0 +1,104 @@
+/// <reference path="./.sst/platform/config.d.ts" />
+
+export default $config({
+  app(input) {
+    return {
+      name: "nz-inventory",
+      removal: input?.stage === "prod" ? "retain" : "remove",
+      home: "aws",
+      providers: {
+        aws: { region: "ap-southeast-2" },
+        random: "4.16.7",
+      },
+    };
+  },
+  async run() {
+    // VPC with managed NAT so Lambda-in-VPC can reach the internet (QBO).
+    const vpc = new sst.aws.Vpc("Vpc", { nat: "managed" });
+
+    // DB admin password stored in Secrets Manager (via random).
+    const dbPassword = new random.RandomPassword("DbPassword", {
+      length: 32,
+      special: false,
+    });
+
+    // Put RDS in the VPC's PUBLIC subnets + enable publiclyAccessible so we can
+    // run prisma db push and seed from the developer's machine. Security group
+    // restricts to (a) the developer's IP and (b) the VPC internal CIDR for
+    // Lambda.
+    const subnetGroup = new aws.rds.SubnetGroup("DbSubnets", {
+      subnetIds: vpc.publicSubnets,
+    });
+
+    const dbSg = new aws.ec2.SecurityGroup("DbSg", {
+      vpcId: vpc.id,
+      description: "NZ Inventory Postgres",
+      ingress: [
+        {
+          protocol: "tcp",
+          fromPort: 5432,
+          toPort: 5432,
+          cidrBlocks: [
+            "139.180.65.216/32", // developer bootstrap IP
+            "10.0.0.0/16",       // VPC internal for Lambda
+          ],
+          description: "Postgres",
+        },
+      ],
+      egress: [
+        { protocol: "-1", fromPort: 0, toPort: 0, cidrBlocks: ["0.0.0.0/0"] },
+      ],
+    });
+
+    const db = new aws.rds.Instance("Db", {
+      identifier: `nz-inventory-${$app.stage}`,
+      engine: "postgres",
+      engineVersion: "16.4",
+      instanceClass: "db.t4g.micro",
+      allocatedStorage: 20,
+      storageType: "gp3",
+      dbName: "nz_inventory",
+      username: "nzadmin",
+      password: dbPassword.result,
+      dbSubnetGroupName: subnetGroup.name,
+      vpcSecurityGroupIds: [dbSg.id],
+      publiclyAccessible: true,
+      skipFinalSnapshot: true,
+      deletionProtection: false,
+      backupRetentionPeriod: 7,
+      applyImmediately: true,
+      autoMinorVersionUpgrade: true,
+    });
+
+    const databaseUrl = $interpolate`postgresql://${db.username}:${dbPassword.result}@${db.endpoint}/${db.dbName}?schema=public&sslmode=require`;
+
+    const site = new sst.aws.Nextjs("Web", {
+      vpc,
+      environment: {
+        DATABASE_URL: databaseUrl,
+        DIRECT_URL: databaseUrl,
+        NEXT_PUBLIC_SUPABASE_URL: "https://stub.supabase.co",
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: "stub",
+        SUPABASE_SERVICE_ROLE_KEY: "stub",
+        DEV_AUTH_BYPASS: "true",
+        DEV_USER_EMAIL: "owner@example.co.nz",
+        QBO_CLIENT_ID: "",
+        QBO_CLIENT_SECRET: "",
+        QBO_REDIRECT_URI: "",
+        QBO_ENVIRONMENT: "sandbox",
+        QBO_ENCRYPTION_KEY: "ZGV2LWVuY3J5cHRpb24ta2V5LTMyYnl0ZXMtZm9yLXRlc3Rpbmch",
+        APP_URL: "",
+        CRON_SECRET: "stub-cron-secret",
+        ADMIN_EMAIL: "owner@example.co.nz",
+      },
+    });
+
+    return {
+      dbEndpoint: db.endpoint,
+      dbUsername: db.username,
+      dbPassword: dbPassword.result,
+      dbName: db.dbName,
+      url: site.url,
+    };
+  },
+});
