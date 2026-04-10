@@ -13,20 +13,15 @@ export default $config({
     };
   },
   async run() {
-    // VPC with managed NAT so Lambda-in-VPC can reach the internet (QBO).
     const vpc = new sst.aws.Vpc("Vpc", { nat: "managed" });
 
-    // DB admin password stored in Secrets Manager (via random).
     const dbPassword = new random.RandomPassword("DbPassword", {
       length: 32,
       special: false,
     });
 
-    // Put RDS in the VPC's PUBLIC subnets + enable publiclyAccessible so we can
-    // run prisma db push and seed from the developer's machine. Security group
-    // restricts to (a) the developer's IP and (b) the VPC internal CIDR for
-    // Lambda.
     const subnetGroup = new aws.rds.SubnetGroup("DbSubnets", {
+      name: `nz-inventory-${$app.stage}-db-subnets`,
       subnetIds: vpc.publicSubnets,
     });
 
@@ -40,7 +35,7 @@ export default $config({
           toPort: 5432,
           cidrBlocks: [
             "139.180.65.216/32", // developer bootstrap IP
-            "10.0.0.0/16",       // VPC internal for Lambda
+            "10.0.0.0/16",       // VPC internal for Fargate tasks
           ],
           description: "Postgres",
         },
@@ -53,10 +48,10 @@ export default $config({
     const db = new aws.rds.Instance("Db", {
       identifier: `nz-inventory-${$app.stage}`,
       engine: "postgres",
-      engineVersion: "16.4",
+      engineVersion: "16.3",
       instanceClass: "db.t4g.micro",
       allocatedStorage: 20,
-      storageType: "gp3",
+      storageType: "gp2",
       dbName: "nz_inventory",
       username: "nzadmin",
       password: dbPassword.result,
@@ -65,15 +60,34 @@ export default $config({
       publiclyAccessible: true,
       skipFinalSnapshot: true,
       deletionProtection: false,
-      backupRetentionPeriod: 7,
+      backupRetentionPeriod: 0,
       applyImmediately: true,
       autoMinorVersionUpgrade: true,
     });
 
     const databaseUrl = $interpolate`postgresql://${db.username}:${dbPassword.result}@${db.endpoint}/${db.dbName}?schema=public&sslmode=require`;
 
-    const site = new sst.aws.Nextjs("Web", {
-      vpc,
+    // Fargate cluster + service with a public ALB (no CloudFront needed).
+    const cluster = new sst.aws.Cluster("Cluster", { vpc });
+
+    const web = new sst.aws.Service("Web", {
+      cluster,
+      cpu: "0.25 vCPU",
+      memory: "0.5 GB",
+      scaling: { min: 1, max: 2 },
+      loadBalancer: {
+        ports: [{ listen: "80/http", forward: "3000/http" }],
+      },
+      image: {
+        context: ".",
+        dockerfile: "Dockerfile",
+      },
+      architecture: "arm64",
+      health: {
+        command: ["CMD-SHELL", "curl -f http://localhost:3000/ || exit 1"],
+        interval: "30 seconds",
+        startPeriod: "60 seconds",
+      },
       environment: {
         DATABASE_URL: databaseUrl,
         DIRECT_URL: databaseUrl,
@@ -94,11 +108,11 @@ export default $config({
     });
 
     return {
+      url: web.url,
       dbEndpoint: db.endpoint,
       dbUsername: db.username,
       dbPassword: dbPassword.result,
       dbName: db.dbName,
-      url: site.url,
     };
   },
 });
