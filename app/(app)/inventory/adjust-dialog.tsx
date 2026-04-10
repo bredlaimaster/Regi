@@ -40,7 +40,7 @@ export function AdjustDialog({ productId, productName }: { productId: string; pr
             onClick={() =>
               start(async () => {
                 const res = await adjustStock({ productId, qtyChange: qty, notes });
-                if (!res.ok) return toast.error(res.error);
+                if (!res.ok) { toast.error(res.error); return; }
                 toast.success("Stock adjusted");
                 setOpen(false);
                 router.refresh();

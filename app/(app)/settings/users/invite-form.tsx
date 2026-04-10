@@ -22,7 +22,7 @@ export function InviteForm() {
         e.preventDefault();
         start(async () => {
           const res = await inviteUser({ email, name, role });
-          if (!res.ok) return toast.error(res.error);
+          if (!res.ok) { toast.error(res.error); return; }
           toast.success("Invited");
           setEmail(""); setName("");
           router.refresh();

@@ -1,4 +1,5 @@
 import React from "react";
+import type { DocumentProps } from "@react-pdf/renderer";
 import { Document, Page, Text, View, StyleSheet, renderToStream } from "@react-pdf/renderer";
 import { formatNzDate, formatNzd } from "@/lib/utils";
 
@@ -64,8 +65,9 @@ export function DocPdf({
   );
 }
 
-export async function renderPdf(element: React.ReactElement): Promise<ReadableStream> {
+export async function renderPdf(
+  element: React.ReactElement<DocumentProps>
+): Promise<ReadableStream> {
   const stream = await renderToStream(element);
-  // @ts-expect-error node stream -> web stream in runtime
-  return stream;
+  return stream as unknown as ReadableStream;
 }

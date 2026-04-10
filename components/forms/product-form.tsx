@@ -45,7 +45,7 @@ export function ProductForm({
     const fd = new FormData();
     fd.append("file", file);
     const res = await uploadProductImage(fd);
-    if (!res.ok) return toast.error(res.error);
+    if (!res.ok) { toast.error(res.error); return; }
     setField("imageUrl", res.data.url);
     toast.success("Image uploaded");
   }
@@ -57,7 +57,7 @@ export function ProductForm({
         e.preventDefault();
         start(async () => {
           const res = await upsertProduct(form);
-          if (!res.ok) return toast.error(res.error);
+          if (!res.ok) { toast.error(res.error); return; }
           toast.success("Saved");
           router.push("/products");
           router.refresh();
@@ -131,7 +131,7 @@ export function ProductForm({
               start(async () => {
                 if (!confirm("Delete this product?")) return;
                 const res = await deleteProduct(initial.id);
-                if (!res.ok) return toast.error(res.error);
+                if (!res.ok) { toast.error(res.error); return; }
                 router.push("/products");
                 router.refresh();
               })

@@ -48,7 +48,7 @@ export default $config({
     const db = new aws.rds.Instance("Db", {
       identifier: `nz-inventory-${$app.stage}`,
       engine: "postgres",
-      engineVersion: "16.3",
+      engineVersion: "16.13",
       instanceClass: "db.t4g.micro",
       allocatedStorage: 20,
       storageType: "gp2",
@@ -78,10 +78,7 @@ export default $config({
       loadBalancer: {
         ports: [{ listen: "80/http", forward: "3000/http" }],
       },
-      image: {
-        context: ".",
-        dockerfile: "Dockerfile",
-      },
+      image: "186048966327.dkr.ecr.ap-southeast-2.amazonaws.com/nz-inventory:latest",
       architecture: "arm64",
       health: {
         command: ["CMD-SHELL", "curl -f http://localhost:3000/ || exit 1"],

@@ -10,11 +10,11 @@ import { toast } from "sonner";
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const supabase = createClient();
 
   async function signInMagic(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: `${location.origin}/auth/callback` },
@@ -25,6 +25,7 @@ export default function LoginPage() {
   }
 
   async function signInGoogle() {
+    const supabase = createClient();
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${location.origin}/auth/callback` },

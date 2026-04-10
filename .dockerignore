@@ -1,7 +1,10 @@
 node_modules
 .next
 .sst
+sst.config.ts
 .open-next
+Dockerfile
+.dockerignore
 .git
 .env
 .env.local

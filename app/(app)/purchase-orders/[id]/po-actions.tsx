@@ -13,7 +13,7 @@ export function PoActions({ poId, status }: { poId: string; status: POStatus }) 
   function run(fn: () => Promise<{ ok: boolean; error?: string }>) {
     start(async () => {
       const res = await fn();
-      if (!res.ok) return toast.error(res.error ?? "Error");
+      if (!res.ok) { toast.error(res.error ?? "Error"); return; }
       toast.success("Updated");
       router.refresh();
     });

@@ -42,7 +42,7 @@ export function ContactForm({
         e.preventDefault();
         start(async () => {
           const res = await upsert(f);
-          if (!res.ok) return toast.error(res.error);
+          if (!res.ok) { toast.error(res.error); return; }
           toast.success("Saved");
           router.push(listPath);
           router.refresh();
@@ -68,7 +68,7 @@ export function ContactForm({
             onClick={() => start(async () => {
               if (!confirm("Delete?")) return;
               const res = await remove(initial.id!);
-              if (!res.ok) return toast.error(res.error);
+              if (!res.ok) { toast.error(res.error); return; }
               router.push(listPath); router.refresh();
             })}
           >Delete</Button>

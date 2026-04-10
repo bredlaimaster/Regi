@@ -46,7 +46,7 @@ export function SoForm({
             notes,
             lines: lines.filter((l) => l.productId),
           });
-          if (!res.ok) return toast.error(res.error);
+          if (!res.ok) { toast.error(res.error); return; }
           toast.success("SO saved");
           router.push(`/sales-orders/${res.data.id}`);
           router.refresh();

@@ -9,6 +9,11 @@ declare module "sst" {
     "Vpc": {
       "type": "sst.aws.Vpc"
     }
+    "Web": {
+      "service": string
+      "type": "sst.aws.Service"
+      "url": string
+    }
   }
 }
 /// <reference path="sst-env.d.ts" />
