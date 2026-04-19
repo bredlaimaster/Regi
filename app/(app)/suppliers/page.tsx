@@ -27,6 +27,8 @@ export default async function SuppliersPage() {
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Currency</TableHead>
+              <TableHead>Supplier Code</TableHead>
+              <TableHead>Payment Terms</TableHead>
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
@@ -38,10 +40,12 @@ export default async function SuppliersPage() {
                 <TableCell>{s.email ?? "—"}</TableCell>
                 <TableCell>{s.phone ?? "—"}</TableCell>
                 <TableCell>{s.currency}</TableCell>
+                <TableCell>{s.acctCode ?? "—"}</TableCell>
+                <TableCell>{s.paymentTerms ?? "—"}</TableCell>
                 <TableCell className="text-right"><Link href={`/suppliers/${s.id}`} className="text-primary text-sm">Edit</Link></TableCell>
               </TableRow>
             ))}
-            {rows.length === 0 && (<TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No suppliers yet</TableCell></TableRow>)}
+            {rows.length === 0 && (<TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No suppliers yet</TableCell></TableRow>)}
           </TableBody>
         </Table>
       </Card>

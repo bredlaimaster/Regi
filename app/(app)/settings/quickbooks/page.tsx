@@ -24,8 +24,12 @@ export default async function QboSettingsPage() {
         <CardHeader><CardTitle>Connection</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {conn ? (
-            <div className="text-sm">
-              Connected to Realm <span className="font-mono">{conn.realmId}</span>, expires {formatNzDateTime(conn.expiresAt)}
+            <div className="space-y-1 text-sm">
+              <div>Connected to Realm <span className="font-mono">{conn.realmId}</span></div>
+              <div className="text-muted-foreground">
+                Connection valid until {conn.refreshTokenExpiresAt ? formatNzDateTime(conn.refreshTokenExpiresAt) : "unknown"}
+                {" · "}Access token auto-refreshes every hour
+              </div>
             </div>
           ) : (
             <div className="text-sm text-muted-foreground">Not connected.</div>

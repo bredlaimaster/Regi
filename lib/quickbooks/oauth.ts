@@ -74,6 +74,10 @@ export async function getValidAccessToken(tenantId: string): Promise<{ accessTok
 }
 
 export async function storeConnection(tenantId: string, realmId: string, tok: TokenResp) {
+  const refreshTokenExpiresAt = tok.x_refresh_token_expires_in
+    ? new Date(Date.now() + tok.x_refresh_token_expires_in * 1000)
+    : new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // default 100 days
+
   await prisma.qboConnection.upsert({
     where: { tenantId },
     create: {
@@ -82,12 +86,14 @@ export async function storeConnection(tenantId: string, realmId: string, tok: To
       accessToken: tok.access_token,
       refreshTokenEnc: encrypt(tok.refresh_token),
       expiresAt: new Date(Date.now() + tok.expires_in * 1000),
+      refreshTokenExpiresAt,
     },
     update: {
       realmId,
       accessToken: tok.access_token,
       refreshTokenEnc: encrypt(tok.refresh_token),
       expiresAt: new Date(Date.now() + tok.expires_in * 1000),
+      refreshTokenExpiresAt,
     },
   });
 }

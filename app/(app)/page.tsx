@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatNzd } from "@/lib/utils";
+import { DASHBOARD_WINDOW_DAYS } from "@/lib/constants";
 
 export default async function DashboardPage() {
   const session = await requireSession();
@@ -17,7 +18,7 @@ export default async function DashboardPage() {
       where: { tenantId },
       include: { stockLevel: true },
     }),
-    Promise.resolve(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)),
+    Promise.resolve(new Date(Date.now() - DASHBOARD_WINDOW_DAYS * 24 * 60 * 60 * 1000)),
   ]);
 
   const lowStock = products.filter((p) => (p.stockLevel?.qty ?? 0) <= p.reorderPoint);
@@ -71,7 +72,7 @@ export default async function DashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Top products — last 30 days</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Top products — last {DASHBOARD_WINDOW_DAYS} days</CardTitle></CardHeader>
           <CardContent>
             <Table>
               <TableHeader><TableRow><TableHead>Name</TableHead><TableHead className="text-right">Units sold</TableHead></TableRow></TableHeader>

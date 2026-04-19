@@ -11,26 +11,45 @@ import { Trash2, Plus } from "lucide-react";
 import { formatNzd } from "@/lib/utils";
 import { upsertSalesOrder } from "@/actions/sales-orders";
 
-type Line = { productId: string; qtyOrdered: number };
-type Product = { id: string; sku: string; name: string; sellPriceNzd: number; stock: number };
+type Line = { productId: string; qtyOrdered: string };
+type GroupPriceEntry = { priceGroupId: string; unitPrice: number; minQty: number };
+type Product = { id: string; sku: string; name: string; sellPriceNzd: number; stock: number; prices?: GroupPriceEntry[] };
+type Customer = { id: string; name: string; priceGroupId?: string | null };
+type PriceGroup = { id: string; name: string };
+
+function resolvePrice(product: Product, priceGroupId: string | null | undefined, qty: number): number {
+  if (!priceGroupId || !product.prices || product.prices.length === 0) return product.sellPriceNzd;
+  // Filter to the customer's group, find the best qty break (largest minQty <= qty).
+  const matches = product.prices
+    .filter((p) => p.priceGroupId === priceGroupId && p.minQty <= qty)
+    .sort((a, b) => b.minQty - a.minQty);
+  return matches.length > 0 ? matches[0].unitPrice : product.sellPriceNzd;
+}
 
 export function SoForm({
   customers,
   products,
+  priceGroups,
 }: {
-  customers: { id: string; name: string }[];
+  customers: Customer[];
   products: Product[];
+  priceGroups: PriceGroup[];
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [customerId, setCustomerId] = useState("");
   const [notes, setNotes] = useState("");
-  const [lines, setLines] = useState<Line[]>([{ productId: "", qtyOrdered: 1 }]);
+  const [lines, setLines] = useState<Line[]>([{ productId: "", qtyOrdered: "" }]);
   const productMap = Object.fromEntries(products.map((p) => [p.id, p]));
+  const groupMap = Object.fromEntries(priceGroups.map((g) => [g.id, g.name]));
+  const selectedCustomer = customers.find((c) => c.id === customerId);
+  const customerGroupId = selectedCustomer?.priceGroupId ?? null;
+  const customerGroupName = customerGroupId ? groupMap[customerGroupId] : null;
 
   const subtotal = lines.reduce((s, l) => {
     const p = productMap[l.productId];
-    return s + (p ? p.sellPriceNzd * l.qtyOrdered : 0);
+    const qty = parseInt(l.qtyOrdered) || 0;
+    return s + (p ? resolvePrice(p, customerGroupId, qty) * qty : 0);
   }, 0);
   const gst = subtotal * 0.15;
   const total = subtotal + gst;
@@ -44,7 +63,7 @@ export function SoForm({
           const res = await upsertSalesOrder({
             customerId,
             notes,
-            lines: lines.filter((l) => l.productId),
+            lines: lines.filter((l) => l.productId).map((l) => ({ productId: l.productId, qtyOrdered: parseInt(l.qtyOrdered) || 0 })),
           });
           if (!res.ok) { toast.error(res.error); return; }
           toast.success("SO saved");
@@ -58,8 +77,20 @@ export function SoForm({
           <Label>Customer</Label>
           <Select value={customerId} onValueChange={setCustomerId}>
             <SelectTrigger><SelectValue placeholder="Select customer" /></SelectTrigger>
-            <SelectContent>{customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+            <SelectContent>{customers.map((c) => {
+              const groupName = c.priceGroupId ? groupMap[c.priceGroupId] : null;
+              return (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}{groupName ? ` (${groupName})` : ""}
+                </SelectItem>
+              );
+            })}</SelectContent>
           </Select>
+          {customerGroupName && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Price group: <span className="font-medium">{customerGroupName}</span> — group prices apply automatically
+            </p>
+          )}
         </div>
       </div>
 
@@ -87,10 +118,10 @@ export function SoForm({
                 </div>
                 <div className="col-span-2 text-right text-sm text-muted-foreground">{p?.stock ?? "—"}</div>
                 <div className="col-span-2">
-                  <Input type="number" className="text-right" value={l.qtyOrdered}
-                    onChange={(e) => setLines((xs) => xs.map((x, idx) => idx === i ? { ...x, qtyOrdered: Number(e.target.value) } : x))} />
+                  <Input type="text" inputMode="numeric" className="text-right" placeholder="0" value={l.qtyOrdered}
+                    onChange={(e) => setLines((xs) => xs.map((x, idx) => idx === i ? { ...x, qtyOrdered: e.target.value.replace(/[^0-9]/g, "") } : x))} />
                 </div>
-                <div className="col-span-1 text-right text-sm">{p ? formatNzd(p.sellPriceNzd * l.qtyOrdered) : "—"}</div>
+                <div className="col-span-1 text-right text-sm">{p ? formatNzd(resolvePrice(p, customerGroupId, parseInt(l.qtyOrdered) || 0) * (parseInt(l.qtyOrdered) || 0)) : "—"}</div>
                 <div className="col-span-1 text-right">
                   <Button type="button" variant="ghost" size="icon" onClick={() => setLines((xs) => xs.filter((_, idx) => idx !== i))}>
                     <Trash2 className="h-4 w-4" />
@@ -100,7 +131,7 @@ export function SoForm({
             );
           })}
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={() => setLines((xs) => [...xs, { productId: "", qtyOrdered: 1 }])}>
+        <Button type="button" variant="outline" size="sm" onClick={() => setLines((xs) => [...xs, { productId: "", qtyOrdered: "" }])}>
           <Plus className="h-4 w-4 mr-1" /> Add line
         </Button>
       </div>

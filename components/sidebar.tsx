@@ -11,6 +11,8 @@ import {
   Boxes,
   BarChart3,
   Settings,
+  FileText,
+  BookmarkCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +22,8 @@ const NAV = [
   { href: "/inventory", label: "Inventory", icon: Boxes },
   { href: "/purchase-orders", label: "Purchase Orders", icon: ClipboardList },
   { href: "/sales-orders", label: "Sales Orders", icon: ShoppingCart },
+  { href: "/proforma", label: "Proforma Invoices", icon: FileText },
+  { href: "/reservations", label: "Reservations", icon: BookmarkCheck },
   { href: "/suppliers", label: "Suppliers", icon: Truck },
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/reports", label: "Reports", icon: BarChart3 },

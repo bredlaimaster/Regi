@@ -14,7 +14,7 @@ import { adjustStock } from "@/actions/inventory";
 export function AdjustDialog({ productId, productName }: { productId: string; productName: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [qty, setQty] = useState(0);
+  const [qty, setQty] = useState("");
   const [notes, setNotes] = useState("");
   const [pending, start] = useTransition();
 
@@ -26,7 +26,7 @@ export function AdjustDialog({ productId, productName }: { productId: string; pr
         <div className="space-y-3">
           <div className="space-y-2">
             <Label>Quantity change (use negative to decrease)</Label>
-            <Input type="number" value={qty} onChange={(e) => setQty(Number(e.target.value))} />
+            <Input type="text" inputMode="numeric" className="text-right" placeholder="0" value={qty} onChange={(e) => setQty(e.target.value.replace(/[^0-9-]/g, ""))} />
           </div>
           <div className="space-y-2">
             <Label>Reason</Label>
@@ -39,7 +39,7 @@ export function AdjustDialog({ productId, productName }: { productId: string; pr
             disabled={pending || !notes}
             onClick={() =>
               start(async () => {
-                const res = await adjustStock({ productId, qtyChange: qty, notes });
+                const res = await adjustStock({ productId, qtyChange: parseInt(qty) || 0, notes });
                 if (!res.ok) { toast.error(res.error); return; }
                 toast.success("Stock adjusted");
                 setOpen(false);

@@ -1,11 +1,34 @@
-import { ContactForm } from "@/components/forms/contact-form";
-import { upsertSupplier, deleteSupplier } from "@/actions/suppliers";
+import { requireSession } from "@/lib/auth";
+import { SupplierDetailTabs } from "@/components/suppliers/supplier-detail-tabs";
 
-export default function NewSupplierPage() {
+export default async function NewSupplierPage() {
+  await requireSession();
+
   return (
-    <div>
-      <h1 className="text-2xl font-semibold mb-4">New supplier</h1>
-      <ContactForm kind="supplier" upsert={upsertSupplier} remove={deleteSupplier} listPath="/suppliers" />
-    </div>
+    <SupplierDetailTabs
+      initial={{
+        id: "",
+        name: "",
+        contactName: null,
+        email: null,
+        phone: null,
+        currency: "NZD",
+        acctCode: null,
+        paymentTerms: null,
+        taxRule: "GST15",
+        gstVatNumber: null,
+        bankName: null,
+        bankBranch: null,
+        bankAccount: null,
+        minimumOrderValue: null,
+        deliveryLeadDays: null,
+        notes: null,
+        postalAddress: null,
+        physicalAddress: null,
+      }}
+      contacts={[]}
+      purchases={[]}
+      costings={[]}
+    />
   );
 }

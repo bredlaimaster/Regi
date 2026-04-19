@@ -13,17 +13,23 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   if (!po) return NextResponse.json({ error: "not found" }, { status: 404 });
   assertTenant(po.tenantId, session.tenantId);
 
+  const fxRate = Number(po.fxRate);
+  const footer = po.currency === "NZD"
+    ? undefined
+    : `Currency: ${po.currency} · Rate 1 ${po.currency} = ${fxRate.toFixed(6)} NZD · NZD total: ${Number(po.totalCostNzd ?? 0).toFixed(2)}`;
+
   const stream = await renderPdf(
     <DocPdf
       title={`Purchase Order · ${po.poNumber}`}
-      subtitle={po.supplier.name}
+      subtitle={`${po.supplier.name} · ${po.currency}`}
       lines={po.lines.map((l) => ({
         sku: l.product.sku,
         name: l.product.name,
         qty: l.qtyOrdered,
-        unit: Number(l.unitCostNzd),
+        unit: Number(l.unitCost),
       }))}
       showPrice
+      footer={footer}
     />
   );
   return new Response(stream as any, { headers: { "Content-Type": "application/pdf" } });

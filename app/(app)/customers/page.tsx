@@ -4,14 +4,31 @@ import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Pagination } from "@/components/pagination";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import { Plus } from "lucide-react";
 
-export default async function CustomersPage() {
+export default async function CustomersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const session = await requireSession();
-  const rows = await prisma.customer.findMany({
-    where: { tenantId: session.tenantId },
-    orderBy: { name: "asc" },
-  });
+  const { page: pageStr } = await searchParams;
+  const currentPage = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
+
+  const where = { tenantId: session.tenantId };
+
+  const [rows, totalCount] = await Promise.all([
+    prisma.customer.findMany({
+      where,
+      orderBy: { name: "asc" },
+      skip: (currentPage - 1) * DEFAULT_PAGE_SIZE,
+      take: DEFAULT_PAGE_SIZE,
+    }),
+    prisma.customer.count({ where }),
+  ]);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -42,6 +59,12 @@ export default async function CustomersPage() {
             {rows.length === 0 && (<TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No customers yet</TableCell></TableRow>)}
           </TableBody>
         </Table>
+        <Pagination
+          currentPage={currentPage}
+          totalCount={totalCount}
+          pageSize={DEFAULT_PAGE_SIZE}
+          basePath="/customers"
+        />
       </Card>
     </div>
   );

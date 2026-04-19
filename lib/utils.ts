@@ -29,6 +29,6 @@ export function formatNzd(n: number | string | null | undefined) {
 }
 
 /** Generate a sequential number like PO-000123 from a numeric id. */
-export function formatDocNumber(prefix: "PO" | "SO", count: number) {
+export function formatDocNumber(prefix: "PO" | "SO" | "PF" | "CN", count: number) {
   return `${prefix}-${String(count + 1).padStart(6, "0")}`;
 }
