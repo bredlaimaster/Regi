@@ -81,26 +81,30 @@ export default $config({
       image: "186048966327.dkr.ecr.ap-southeast-2.amazonaws.com/nz-inventory:latest",
       architecture: "arm64",
       health: {
-        command: ["CMD-SHELL", "curl -f http://localhost:3000/ || exit 1"],
+        command: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"],
         interval: "30 seconds",
         startPeriod: "60 seconds",
       },
       environment: {
         DATABASE_URL: databaseUrl,
         DIRECT_URL: databaseUrl,
+        // Auth: iron-session password-based login (closed system, one client).
+        SESSION_SECRET: "9p22SbOCzoOxNwPPqt7SLj0GP0EKpDlij1bKyah80/s=",
+        // Supabase stubs — only referenced by product-image storage in actions/products.ts.
+        // Replace with real creds when enabling image uploads.
         NEXT_PUBLIC_SUPABASE_URL: "https://stub.supabase.co",
         NEXT_PUBLIC_SUPABASE_ANON_KEY: "stub",
         SUPABASE_SERVICE_ROLE_KEY: "stub",
-        DEV_AUTH_BYPASS: "true",
-        DEV_USER_EMAIL: "owner@example.co.nz",
-        QBO_CLIENT_ID: "",
-        QBO_CLIENT_SECRET: "",
-        QBO_REDIRECT_URI: "",
+        // QuickBooks
+        QBO_CLIENT_ID: "ABo6h1VlyW4cMWKjzLvWplFfNyUPFyXUQDcS6N1jhZ4mEYjhxF",
+        QBO_CLIENT_SECRET: "mELEt54FlthhgknZafoAfZ3VpKf90oMSAK0pXcsz",
+        QBO_REDIRECT_URI: "http://WebLoadBalancer-tbaambtx-482012902.ap-southeast-2.elb.amazonaws.com/api/qbo/callback",
         QBO_ENVIRONMENT: "sandbox",
-        QBO_ENCRYPTION_KEY: "ZGV2LWVuY3J5cHRpb24ta2V5LTMyYnl0ZXMtZm9yLXRlc3Rpbmch",
-        APP_URL: "",
-        CRON_SECRET: "stub-cron-secret",
-        ADMIN_EMAIL: "owner@example.co.nz",
+        QBO_ENCRYPTION_KEY: "IPV9hSNQr/EpVCdVBkiRnkM0SDPM83B2dD8lpwWS2GA=",
+        // App
+        APP_URL: "http://WebLoadBalancer-tbaambtx-482012902.ap-southeast-2.elb.amazonaws.com",
+        CRON_SECRET: "change-me-in-production",
+        ADMIN_EMAIL: "owner@regionalhealth.co.nz",
       },
     });
 

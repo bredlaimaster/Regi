@@ -1,34 +1,26 @@
 "use client";
-import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
+import { signInAction } from "@/actions/users";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState("");
+  const [pending, start] = useTransition();
 
-  async function signInMagic(e: React.FormEvent) {
+  function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${location.origin}/auth/callback` },
-    });
-    setLoading(false);
-    if (error) toast.error(error.message);
-    else toast.success("Check your email for the magic link.");
-  }
-
-  async function signInGoogle() {
-    const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${location.origin}/auth/callback` },
+    start(async () => {
+      const res = await signInAction({ email, password });
+      if (!res.ok) { toast.error(res.error); return; }
+      router.push("/");
+      router.refresh();
     });
   }
 
@@ -39,19 +31,34 @@ export default function LoginPage() {
           <CardTitle>Sign in</CardTitle>
           <CardDescription>Access your inventory workspace</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <form onSubmit={signInMagic} className="space-y-3">
+        <CardContent>
+          <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+              <Input
+                id="email"
+                type="email"
+                autoComplete="username"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Sending..." : "Send magic link"}
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={pending}>
+              {pending ? "Signing in..." : "Sign in"}
             </Button>
           </form>
-          <Button variant="outline" className="w-full" onClick={signInGoogle}>
-            Continue with Google
-          </Button>
         </CardContent>
       </Card>
     </div>

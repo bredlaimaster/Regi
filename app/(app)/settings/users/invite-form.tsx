@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { inviteUser } from "@/actions/users";
+import { createUser } from "@/actions/users";
 
 export function InviteForm() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
   const [role, setRole] = useState<"ADMIN" | "SALES" | "WAREHOUSE">("WAREHOUSE");
   const [pending, start] = useTransition();
   const router = useRouter();
@@ -21,19 +22,36 @@ export function InviteForm() {
       onSubmit={(e) => {
         e.preventDefault();
         start(async () => {
-          const res = await inviteUser({ email, name, role });
+          const res = await createUser({ email, name: name || null, role, password });
           if (!res.ok) { toast.error(res.error); return; }
-          toast.success("Invited");
-          setEmail(""); setName("");
+          toast.success(`${email} can now sign in`);
+          setEmail(""); setName(""); setPassword("");
           router.refresh();
         });
       }}
     >
-      <div className="space-y-1"><Label>Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
-      <div className="space-y-1"><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+      <div className="space-y-1">
+        <Label>Email</Label>
+        <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+      </div>
+      <div className="space-y-1">
+        <Label>Name</Label>
+        <Input value={name} onChange={(e) => setName(e.target.value)} />
+      </div>
+      <div className="space-y-1">
+        <Label>Password</Label>
+        <Input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Min 8 chars"
+          minLength={8}
+          required
+        />
+      </div>
       <div className="space-y-1">
         <Label>Role</Label>
-        <Select value={role} onValueChange={(v) => setRole(v as any)}>
+        <Select value={role} onValueChange={(v) => setRole(v as "ADMIN" | "SALES" | "WAREHOUSE")}>
           <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="ADMIN">Admin</SelectItem>
@@ -42,7 +60,7 @@ export function InviteForm() {
           </SelectContent>
         </Select>
       </div>
-      <Button type="submit" disabled={pending}>{pending ? "Inviting..." : "Invite"}</Button>
+      <Button type="submit" disabled={pending}>{pending ? "Creating..." : "Create user"}</Button>
     </form>
   );
 }

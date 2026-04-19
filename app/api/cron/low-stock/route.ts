@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { supabaseAdmin } from "@/lib/supabase/admin";
 
 /**
- * Daily cron: email each tenant admin the list of low-stock products.
- * Uses Supabase's built-in email (via admin invite-by-email fallback) in dev;
- * in prod wire this up to Resend / Postmark.
+ * Daily cron: log per-tenant low-stock lists for admins.
+ * Replace the console.log stub with a real email provider (Resend / Postmark) when needed.
  */
 export async function GET(request: Request) {
   const auth = request.headers.get("authorization");
