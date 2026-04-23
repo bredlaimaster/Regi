@@ -1,7 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { sessionOptions } from "@/lib/session";
 
-const PUBLIC_PATHS = ["/login", "/api/qbo/callback", "/api/cron", "/api/health"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/api/qbo/callback",
+  "/api/cron",
+  "/api/health",
+  // PWA shell assets need to load before sign-in (so the install prompt works).
+  "/manifest.webmanifest",
+  "/icons",
+];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

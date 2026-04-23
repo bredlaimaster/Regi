@@ -144,6 +144,9 @@ model Product {
   @@index([tenantId])
   @@index([tenantId, active])
   @@index([brandId])
+  // Mobile app scans barcodes — indexed to keep scan-to-product lookups O(log n).
+  @@index([tenantId, unitBarcode])
+  @@index([tenantId, caseBarcode])
 }
 
 /// User-managed pricing group (e.g. Retail, Wholesale, Gold Tier, Distributor).
