@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatNzDateTime } from "@/lib/utils";
+import { QboSyncButton } from "./sync-button";
 
 export default async function QboSettingsPage() {
   const session = await requireRole(["ADMIN"]);
@@ -34,9 +35,12 @@ export default async function QboSettingsPage() {
           ) : (
             <div className="text-sm text-muted-foreground">Not connected.</div>
           )}
-          <Button asChild>
-            <Link href="/api/qbo/connect">{conn ? "Reconnect" : "Connect QuickBooks"}</Link>
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <Button asChild>
+              <Link href="/api/qbo/connect">{conn ? "Reconnect" : "Connect QuickBooks"}</Link>
+            </Button>
+            <QboSyncButton connected={!!conn} />
+          </div>
         </CardContent>
       </Card>
 

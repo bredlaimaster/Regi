@@ -19,13 +19,18 @@ function getSecret(): string {
   return DEV_FALLBACK;
 }
 
+// Only mark the cookie Secure when the app is actually served over HTTPS.
+// The ALB here is HTTP, so Secure=true would cause browsers to silently drop
+// the Set-Cookie and the user would bounce back to /login on every sign-in.
+const SECURE_COOKIE = (process.env.APP_URL ?? "").startsWith("https://");
+
 export const sessionOptions: SessionOptions = {
   password: getSecret(),
   cookieName: "nz_inv_session",
   cookieOptions: {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: SECURE_COOKIE,
     path: "/",
     maxAge: 60 * 60 * 24 * 30, // 30 days
   },

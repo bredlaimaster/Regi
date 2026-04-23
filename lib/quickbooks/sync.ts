@@ -56,6 +56,25 @@ export async function processQboSyncJobs(tenantId?: string) {
   }
 }
 
+/**
+ * Map a customer tax rule to QBO NZ income tax-code names.
+ * QBO NZ uses "GST on Income" (15%) and "GST Free Income" (0%).
+ */
+function taxCodeForIncome(taxRule: string): string {
+  return taxRule === "GST15" ? "GST on Income" : "GST Free Income";
+}
+
+/** Look up a QBO tax code Id by name. Returns undefined if not found. */
+async function lookupTaxCodeId(tenantId: string, name: string): Promise<string | undefined> {
+  try {
+    const q = encodeURIComponent(`select Id, Name from TaxCode where Name = '${name}'`);
+    const res = await qboFetch(tenantId, `/query?query=${q}`);
+    return res?.QueryResponse?.TaxCode?.[0]?.Id;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Push a SalesOrder as a QBO Invoice. Creates customer if missing. */
 async function pushInvoice(tenantId: string, soId: string) {
   const so = await prisma.salesOrder.findUnique({
@@ -82,7 +101,12 @@ async function pushInvoice(tenantId: string, soId: string) {
     customerId = cres.Customer.Id;
   }
 
-  // Build line items (NZ GST 15% applied at tax detail level).
+  // Resolve the NZ GST code Id for this customer's tax rule. If lookup fails,
+  // we fall through without a TaxCodeRef and let QBO apply its company default —
+  // which will at least not fail with "transactions must have a GST rate".
+  const taxCodeName = taxCodeForIncome(so.customer.taxRule);
+  const incomeTaxCodeId = await lookupTaxCodeId(tenantId, taxCodeName);
+
   const lines = so.lines.map((l) => ({
     DetailType: "SalesItemLineDetail",
     Amount: Number(l.product.sellPriceNzd) * l.qtyOrdered,
@@ -90,15 +114,16 @@ async function pushInvoice(tenantId: string, soId: string) {
     SalesItemLineDetail: {
       Qty: l.qtyOrdered,
       UnitPrice: Number(l.product.sellPriceNzd),
-      TaxCodeRef: { value: "NON" }, // TODO: map to actual NZ GST code for your QBO company
+      ...(incomeTaxCodeId ? { TaxCodeRef: { value: incomeTaxCodeId } } : {}),
     },
   }));
 
+  // Let QBO calculate tax itself from the per-line TaxCodeRef. Don't force
+  // TxnTaxDetail — that previously zeroed out GST and caused validation 400s.
   const payload = {
     CustomerRef: { value: customerId },
     DocNumber: so.soNumber,
     Line: lines,
-    TxnTaxDetail: { TotalTax: 0 },
     PrivateNote: so.notes ?? undefined,
   };
 
