@@ -367,10 +367,10 @@ export function SupplierDetailTabs({
                 <Select value={f.taxRule ?? "GST15"} onValueChange={(v) => setField("taxRule", v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="GST15">GST 15% — NZ domestic</SelectItem>
-                    <SelectItem value="ZERO">Zero rated — Exports / financial</SelectItem>
-                    <SelectItem value="IMPORT_GST">Import GST — Overseas, GST at border</SelectItem>
-                    <SelectItem value="EXEMPT">Exempt — No GST</SelectItem>
+                    <SelectItem value="GST15">GST 15% — NZ domestic (GST-registered supplier)</SelectItem>
+                    <SelectItem value="ZERO">Zero rated — 0% NZ supplier (rare)</SelectItem>
+                    <SelectItem value="IMPORT_GST">Import GST — Overseas supplier, GST billed separately by Customs</SelectItem>
+                    <SelectItem value="EXEMPT">Exempt / Out of scope</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

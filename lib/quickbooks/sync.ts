@@ -1,5 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { qboFetch } from "./client";
+import {
+  INCOME_FALLBACKS,
+  EXPENSE_FALLBACKS,
+  expenseFallbacksForRate,
+  resolveTaxCodeId,
+  type TaxRule,
+} from "./tax-codes";
 
 /** Enqueue a sync job (idempotent per entity). */
 export async function enqueueQboSync(args: {
@@ -56,26 +63,17 @@ export async function processQboSyncJobs(tenantId?: string) {
   }
 }
 
-/**
- * Map a customer tax rule to QBO NZ income tax-code names.
- * QBO NZ uses "GST on Income" (15%) and "GST Free Income" (0%).
- */
-function taxCodeForIncome(taxRule: string): string {
-  return taxRule === "GST15" ? "GST on Income" : "GST Free Income";
-}
-
-/** Look up a QBO tax code Id by name. Returns undefined if not found. */
-async function lookupTaxCodeId(tenantId: string, name: string): Promise<string | undefined> {
-  try {
-    const q = encodeURIComponent(`select Id, Name from TaxCode where Name = '${name}'`);
-    const res = await qboFetch(tenantId, `/query?query=${q}`);
-    return res?.QueryResponse?.TaxCode?.[0]?.Id;
-  } catch {
-    return undefined;
+/** Narrow a String tax rule from the DB to the TaxRule union with a safe default. */
+function asTaxRule(value: string): TaxRule {
+  if (value === "GST15" || value === "ZERO" || value === "IMPORT_GST" || value === "EXEMPT") {
+    return value;
   }
+  return "GST15";
 }
 
-/** Push a SalesOrder as a QBO Invoice. Creates customer if missing. */
+/** Push a SalesOrder as a QBO Invoice. Creates customer if missing.
+ *  Prices are GST-exclusive NZD — QBO adds 15% based on TaxCodeRef.
+ */
 async function pushInvoice(tenantId: string, soId: string) {
   const so = await prisma.salesOrder.findUnique({
     where: { id: soId },
@@ -101,11 +99,9 @@ async function pushInvoice(tenantId: string, soId: string) {
     customerId = cres.Customer.Id;
   }
 
-  // Resolve the NZ GST code Id for this customer's tax rule. If lookup fails,
-  // we fall through without a TaxCodeRef and let QBO apply its company default —
-  // which will at least not fail with "transactions must have a GST rate".
-  const taxCodeName = taxCodeForIncome(so.customer.taxRule);
-  const incomeTaxCodeId = await lookupTaxCodeId(tenantId, taxCodeName);
+  // Resolve the NZ GST income code for this customer's tax rule.
+  const rule = asTaxRule(so.customer.taxRule);
+  const taxCode = await resolveTaxCodeId(tenantId, INCOME_FALLBACKS[rule]);
 
   const lines = so.lines.map((l) => ({
     DetailType: "SalesItemLineDetail",
@@ -114,16 +110,17 @@ async function pushInvoice(tenantId: string, soId: string) {
     SalesItemLineDetail: {
       Qty: l.qtyOrdered,
       UnitPrice: Number(l.product.sellPriceNzd),
-      ...(incomeTaxCodeId ? { TaxCodeRef: { value: incomeTaxCodeId } } : {}),
+      ...(taxCode ? { TaxCodeRef: { value: taxCode.id } } : {}),
     },
   }));
 
-  // Let QBO calculate tax itself from the per-line TaxCodeRef. Don't force
-  // TxnTaxDetail — that previously zeroed out GST and caused validation 400s.
   const payload = {
     CustomerRef: { value: customerId },
     DocNumber: so.soNumber,
     Line: lines,
+    // Prices are ex-GST; tell QBO to add tax per line rather than treat amounts
+    // as already tax-inclusive.
+    GlobalTaxCalculation: "TaxExcluded",
     PrivateNote: so.notes ?? undefined,
   };
 
@@ -131,24 +128,8 @@ async function pushInvoice(tenantId: string, soId: string) {
   await prisma.salesOrder.update({ where: { id: so.id }, data: { qboInvoiceId: res.Invoice.Id } });
 }
 
-/**
- * Map a supplier tax rule to QBO NZ tax code references.
- * QBO NZ typically uses:
- *   - "GST on Expenses" (15%) for domestic taxable purchases
- *   - "GST Free Expenses" (0%) for exempt / overseas / zero-rated
- *   - "GST on Imports" for goods where import GST was paid at Customs
- *
- * These string values map to the Name field of TaxCode in QBO NZ.
- * We look them up by name at runtime so it works across different QBO companies.
- */
-function taxCodeForRate(taxRate: number): string {
-  // QBO NZ uses these standard tax code names
-  if (taxRate >= 15) return "GST on Expenses";
-  return "GST Free Expenses";
-}
-
 /** Push a PurchaseOrder receipt as a QBO Bill. Creates vendor if missing.
- *  All amounts are pushed in NZD — QBO home currency. */
+ *  All amounts pushed in NZD — QBO home currency — GST-exclusive. */
 async function pushBill(tenantId: string, poId: string) {
   const po = await prisma.purchaseOrder.findUnique({
     where: { id: poId },
@@ -173,25 +154,9 @@ async function pushBill(tenantId: string, poId: string) {
     vendorId = vres.Vendor.Id;
   }
 
-  // Determine tax code for product lines based on supplier tax rule
-  const supplierTaxRate = po.supplier.taxRule === "GST15" ? 15 : 0;
-  const supplierTaxCode = taxCodeForRate(supplierTaxRate);
-
-  // Look up QBO tax code IDs by name
-  const taxCodeCache: Record<string, string> = {};
-  async function resolveTaxCode(taxCodeName: string): Promise<string> {
-    if (taxCodeCache[taxCodeName]) return taxCodeCache[taxCodeName];
-    try {
-      const tcQuery = encodeURIComponent(`select Id, Name from TaxCode where Name = '${taxCodeName}'`);
-      const tcRes = await qboFetch(tenantId, `/query?query=${tcQuery}`);
-      const id = tcRes?.QueryResponse?.TaxCode?.[0]?.Id;
-      if (id) { taxCodeCache[taxCodeName] = id; return id; }
-    } catch { /* fall through */ }
-    // Fallback: use "NON" if we can't find the tax code
-    return "NON";
-  }
-
-  const productTaxCodeId = await resolveTaxCode(supplierTaxCode);
+  // Supplier-level tax code (used for product lines and freight).
+  const supplierRule = asTaxRule(po.supplier.taxRule);
+  const supplierTaxCode = await resolveTaxCodeId(tenantId, EXPENSE_FALLBACKS[supplierRule]);
 
   // PO lines are stored in source currency; convert to NZD using the snapshotted
   // fxRate so QBO always receives NZD amounts. The original foreign cost is
@@ -206,33 +171,29 @@ async function pushBill(tenantId: string, poId: string) {
       Description: `${l.product.sku} ${l.product.name} — ${po.currency} ${srcAmount.toFixed(2)} @ ${fxRate.toFixed(6)}`,
       AccountBasedExpenseLineDetail: {
         AccountRef: { value: "1" },
-        TaxCodeRef: { value: productTaxCodeId },
+        ...(supplierTaxCode ? { TaxCodeRef: { value: supplierTaxCode.id } } : {}),
       },
     };
   });
 
-  // Freight line (in PO source currency, converted to NZD)
+  // Freight from the supplier invoice — same tax code as the product lines.
   if (po.freight && Number(po.freight) > 0) {
     const freightNzd = Number(po.freightNzd ?? Number(po.freight) * fxRate);
-    const freightTaxCodeId = await resolveTaxCode(supplierTaxCode);
     billLines.push({
       DetailType: "AccountBasedExpenseLineDetail",
       Amount: Math.round(freightNzd * 100) / 100,
       Description: `Freight — ${po.currency} ${Number(po.freight).toFixed(2)} @ ${fxRate.toFixed(6)}`,
       AccountBasedExpenseLineDetail: {
         AccountRef: { value: "1" },
-        TaxCodeRef: { value: freightTaxCodeId },
+        ...(supplierTaxCode ? { TaxCodeRef: { value: supplierTaxCode.id } } : {}),
       },
     });
   }
 
-  // Custom receive charges (each has its own currency, FX rate, and tax rate)
+  // Custom receive charges — each carries its own rate, so resolve per-charge.
   for (const ch of po.receiveCharges) {
-    const chTaxRate = Number(ch.taxRate);
-    const chTaxCode = taxCodeForRate(chTaxRate);
-    const chTaxCodeId = await resolveTaxCode(chTaxCode);
+    const chTaxCode = await resolveTaxCodeId(tenantId, expenseFallbacksForRate(Number(ch.taxRate)));
     const amountNzd = Number(ch.amountNzd);
-    const taxNzd = Number(ch.taxAmountNzd);
 
     billLines.push({
       DetailType: "AccountBasedExpenseLineDetail",
@@ -240,20 +201,17 @@ async function pushBill(tenantId: string, poId: string) {
       Description: `${ch.label}${ch.invoiceRef ? ` (Inv: ${ch.invoiceRef})` : ""} — ${ch.currency} ${Number(ch.amount).toFixed(2)}${ch.currency !== "NZD" ? ` @ ${Number(ch.fxRate).toFixed(6)}` : ""}`,
       AccountBasedExpenseLineDetail: {
         AccountRef: { value: "1" },
-        TaxCodeRef: { value: chTaxCodeId },
+        ...(chTaxCode ? { TaxCodeRef: { value: chTaxCode.id } } : {}),
       },
     });
   }
-
-  // Calculate total tax for the bill
-  const totalTax = po.receiveCharges.reduce((s, ch) => s + Number(ch.taxAmountNzd), 0)
-    + (supplierTaxRate > 0 ? Math.round(Number(po.totalCostNzd ?? 0) * 0.15 * 100) / 100 : 0);
 
   const payload = {
     VendorRef: { value: vendorId },
     DocNumber: po.poNumber,
     Line: billLines,
-    // Let QBO calculate tax based on TaxCodeRef on each line
+    // Bill amounts are ex-GST; QBO adds tax per line based on TaxCodeRef.
+    GlobalTaxCalculation: "TaxExcluded",
     PrivateNote: po.notes ?? undefined,
   };
 

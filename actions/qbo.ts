@@ -1,8 +1,9 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/auth";
+import { requireRole, requireSession } from "@/lib/auth";
 import { enqueueQboSync, processQboSyncJobs } from "@/lib/quickbooks/sync";
+import { listTaxCodes } from "@/lib/quickbooks/tax-codes";
 import type { ActionResult } from "@/lib/types";
 
 /**
@@ -65,4 +66,22 @@ export async function runFullQboSync(): Promise<ActionResult> {
       pending,
     },
   };
+}
+
+/**
+ * List the TaxCodes in the connected QBO tenant, plus which ones we would
+ * use for each app tax rule on the income and expense sides. Purely for
+ * display on the Settings → Tax page so the user can confirm the mapping
+ * against their actual QBO file.
+ */
+export async function listQboTaxCodes(): Promise<ActionResult> {
+  const session = await requireSession();
+  const conn = await prisma.qboConnection.findUnique({ where: { tenantId: session.tenantId } });
+  if (!conn) return { ok: false, error: "QuickBooks is not connected" };
+  try {
+    const data = await listTaxCodes(session.tenantId);
+    return { ok: true, data };
+  } catch (e: any) {
+    return { ok: false, error: String(e?.message ?? e) };
+  }
 }

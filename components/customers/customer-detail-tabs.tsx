@@ -369,9 +369,8 @@ export function CustomerDetailTabs({
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="GST15">GST 15% — NZ domestic</SelectItem>
-                    <SelectItem value="ZERO">Zero rated — Exports</SelectItem>
-                    <SelectItem value="IMPORT_GST">Import GST</SelectItem>
-                    <SelectItem value="EXEMPT">Exempt</SelectItem>
+                    <SelectItem value="ZERO">Zero rated — Exports / overseas customers</SelectItem>
+                    <SelectItem value="EXEMPT">Exempt / Out of scope</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
