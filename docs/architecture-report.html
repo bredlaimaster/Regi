@@ -1,0 +1,1293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>NZ Inventory — Architecture Analysis & Rebuild Options</title>
+<style>
+  @page {
+    size: A4;
+    margin: 22mm 18mm 22mm 18mm;
+    @bottom-left { content: "NZ Inventory — Architecture Analysis"; font-size: 9pt; color: #888; }
+    @bottom-right { content: "Page " counter(page) " of " counter(pages); font-size: 9pt; color: #888; }
+  }
+  @page :first { margin: 0; @bottom-left { content: ""; } @bottom-right { content: ""; } }
+
+  :root {
+    --ink: #111827;
+    --muted: #4b5563;
+    --line: #e5e7eb;
+    --soft: #f3f4f6;
+    --accent: #0f5fa8;
+    --accent-soft: #e7f0fa;
+    --good: #15803d;
+    --warn: #b45309;
+    --bad: #b91c1c;
+    --compute: #2563eb;
+    --db: #ea580c;
+    --edge: #7c3aed;
+    --storage: #059669;
+    --external: #4b5563;
+    --cron: #be185d;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    line-height: 1.5;
+    font-size: 10.5pt;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4 { color: var(--ink); line-height: 1.25; margin-top: 1.2em; margin-bottom: 0.4em; }
+  h1 { font-size: 22pt; letter-spacing: -0.01em; }
+  h2 { font-size: 16pt; letter-spacing: -0.005em; padding-bottom: 4pt; border-bottom: 1.5pt solid var(--line); }
+  h3 { font-size: 12pt; color: var(--accent); }
+  h4 { font-size: 11pt; margin-top: 0.8em; margin-bottom: 0.2em; }
+  p { margin: 0.5em 0; }
+  ul, ol { margin: 0.4em 0 0.8em 1.2em; padding: 0; }
+  li { margin: 0.2em 0; }
+  strong { color: var(--ink); }
+  code { font-family: "SF Mono", ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--soft); padding: 1px 5px; border-radius: 3px; font-size: 9.2pt; color: #0b132b; }
+  pre { background: #0f172a; color: #e2e8f0; padding: 12pt; border-radius: 6pt; font-size: 8.8pt; line-height: 1.45; overflow: hidden; white-space: pre-wrap; }
+  pre code { background: transparent; color: inherit; padding: 0; font-size: inherit; }
+  a { color: var(--accent); text-decoration: none; }
+
+  /* Cover */
+  .cover {
+    height: 100vh;
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 32mm 24mm 24mm 24mm;
+    background: linear-gradient(135deg, #0b2545 0%, #1d3557 45%, #0f5fa8 100%);
+    color: #f8fafc;
+    page-break-after: always;
+  }
+  .cover h1 { font-size: 32pt; color: #fff; line-height: 1.1; margin: 0; }
+  .cover .kicker { text-transform: uppercase; letter-spacing: 3px; font-size: 9pt; color: #93c5fd; margin-bottom: 10pt; }
+  .cover .sub { font-size: 13pt; color: #cbd5e1; margin-top: 10pt; max-width: 140mm; }
+  .cover .meta { font-size: 9.5pt; color: #cbd5e1; display: grid; grid-template-columns: 1fr 1fr; gap: 6pt 24pt; max-width: 140mm; }
+  .cover .meta b { color: #fff; }
+  .cover .rule { height: 1.5pt; background: #60a5fa; width: 40mm; margin: 16pt 0; }
+
+  /* Page break helpers */
+  .pb { page-break-before: always; }
+  .pb-after { page-break-after: always; }
+  .avoid-break { page-break-inside: avoid; break-inside: avoid; }
+
+  /* TOC */
+  .toc { columns: 1; }
+  .toc ol { list-style: none; margin: 0; padding: 0; }
+  .toc li { margin: 6pt 0; padding: 4pt 0; border-bottom: 1px dotted var(--line); font-size: 11pt; }
+  .toc li span.n { color: var(--accent); font-weight: 600; margin-right: 10pt; }
+
+  /* Callouts */
+  .callout {
+    border-left: 4pt solid var(--accent);
+    background: var(--accent-soft);
+    padding: 10pt 14pt;
+    margin: 10pt 0;
+    border-radius: 4pt;
+  }
+  .callout.warn { border-left-color: var(--warn); background: #fff7ed; }
+  .callout.bad { border-left-color: var(--bad); background: #fef2f2; }
+  .callout.good { border-left-color: var(--good); background: #f0fdf4; }
+  .callout h4 { margin-top: 0; }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 8.5pt;
+    border-radius: 10pt;
+    background: var(--soft);
+    color: var(--muted);
+    margin-right: 4pt;
+    font-weight: 600;
+  }
+  .badge.good { background: #dcfce7; color: var(--good); }
+  .badge.warn { background: #fef3c7; color: var(--warn); }
+  .badge.bad { background: #fee2e2; color: var(--bad); }
+  .badge.accent { background: var(--accent-soft); color: var(--accent); }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin: 10pt 0; font-size: 9.5pt; }
+  th, td { padding: 6pt 8pt; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+  th { background: #f8fafc; color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 8.5pt; letter-spacing: 0.5px; }
+  tr.total td { font-weight: 700; background: #f1f5f9; }
+
+  /* Comparison matrix */
+  .matrix { font-size: 8.8pt; }
+  .matrix th, .matrix td { padding: 5pt 6pt; text-align: center; }
+  .matrix th:first-child, .matrix td:first-child { text-align: left; font-weight: 500; color: var(--ink); }
+  .matrix .r { font-size: 11pt; }
+  .m-good { color: var(--good); font-weight: 700; }
+  .m-ok { color: #0284c7; font-weight: 700; }
+  .m-warn { color: var(--warn); font-weight: 700; }
+  .m-bad { color: var(--bad); font-weight: 700; }
+
+  /* Architecture diagram */
+  .diagram { margin: 8pt 0 14pt 0; padding: 12pt; background: #fafbfc; border: 1px solid var(--line); border-radius: 6pt; text-align: center; }
+  .diagram svg { max-width: 100%; height: auto; }
+  .diagram .caption { font-size: 8.5pt; color: var(--muted); margin-top: 4pt; text-align: center; }
+
+  /* Option card */
+  .option {
+    border: 1.5pt solid var(--line);
+    border-radius: 8pt;
+    padding: 14pt 16pt;
+    margin: 12pt 0 18pt 0;
+    page-break-inside: auto;
+  }
+  .option.top {
+    border-color: var(--accent);
+    background: linear-gradient(180deg, #f5f9ff 0%, #ffffff 40%);
+  }
+  .option h3 { margin-top: 0; display: flex; align-items: baseline; gap: 10pt; }
+  .option h3 .num { background: var(--accent); color: white; padding: 2px 10px; border-radius: 12pt; font-size: 10pt; }
+  .option h3 .tag { font-size: 9pt; color: var(--muted); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; }
+  .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12pt; margin: 8pt 0; }
+  .cols2 .col h4 { margin-top: 0; }
+  .strengths { background: #f0fdf4; border-left: 3pt solid var(--good); padding: 8pt 12pt; border-radius: 4pt; font-size: 9.5pt; }
+  .weaknesses { background: #fef2f2; border-left: 3pt solid var(--bad); padding: 8pt 12pt; border-radius: 4pt; font-size: 9.5pt; }
+  .strengths ul, .weaknesses ul { margin: 2pt 0 2pt 16pt; }
+
+  /* Cost comparison */
+  .costchart { margin: 10pt 0; }
+  .costchart .bar-row { display: grid; grid-template-columns: 52mm 1fr 25mm; gap: 6pt; align-items: center; margin: 4pt 0; font-size: 9.5pt; }
+  .costchart .bar-row .label { color: var(--ink); }
+  .costchart .bar-row .track { background: var(--soft); height: 14pt; border-radius: 4pt; overflow: hidden; position: relative; }
+  .costchart .bar-row .fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #0f5fa8); border-radius: 4pt; }
+  .costchart .bar-row .fill.alt { background: linear-gradient(90deg, #22c55e, #15803d); }
+  .costchart .bar-row .fill.alt2 { background: linear-gradient(90deg, #eab308, #b45309); }
+  .costchart .bar-row .cost { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  /* Feature grid */
+  .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8pt; margin: 8pt 0; }
+  .feature-card { background: #fafbfc; border: 1px solid var(--line); border-radius: 4pt; padding: 8pt 10pt; font-size: 9pt; }
+  .feature-card h5 { margin: 0 0 4pt 0; font-size: 9.5pt; color: var(--accent); text-transform: uppercase; letter-spacing: 0.3px; }
+
+  /* Pill tag list */
+  .pills { display: flex; flex-wrap: wrap; gap: 4pt; margin: 2pt 0; }
+  .pill { background: var(--soft); color: var(--ink); font-size: 8.5pt; padding: 2px 8px; border-radius: 10pt; border: 1px solid var(--line); }
+  .pill.compute { background: #dbeafe; border-color: #93c5fd; color: #1e40af; }
+  .pill.db { background: #fed7aa; border-color: #fdba74; color: #9a3412; }
+  .pill.storage { background: #bbf7d0; border-color: #86efac; color: #166534; }
+  .pill.edge { background: #e9d5ff; border-color: #c4b5fd; color: #6b21a8; }
+  .pill.ext { background: #e5e7eb; border-color: #d1d5db; color: #374151; }
+
+  /* Report blockquote (rebuild prompt) */
+  blockquote {
+    border-left: 3pt solid var(--accent);
+    margin: 10pt 0;
+    padding: 2pt 14pt 2pt 16pt;
+    background: #fbfdff;
+    font-size: 9.8pt;
+  }
+  blockquote h3, blockquote h4 { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- ============================= COVER ============================= -->
+<section class="cover">
+  <div>
+    <div class="kicker">Architecture Analysis & Rebuild Options</div>
+    <h1>NZ Inventory<br/>Regional Health</h1>
+    <div class="rule"></div>
+    <div class="sub">A senior systems engineer's review of the current production app, five candidate rebuild architectures on AWS, Azure, and GCP, and two rebuild prompts ready to hand to a fresh development team.</div>
+  </div>
+  <div class="meta">
+    <div><b>Prepared by</b><br/>Senior software designer & systems engineer</div>
+    <div><b>Scope</b><br/>Full codebase audit, cloud options, rebuild prompts</div>
+    <div><b>Date</b><br/>20 April 2026</div>
+    <div><b>Target clouds</b><br/>AWS · Azure · GCP</div>
+    <div><b>Current stack</b><br/>Next.js 15 · Prisma 5 · Postgres · AWS Fargate</div>
+    <div><b>Report length</b><br/>9 sections · diagrams · comparison matrix</div>
+  </div>
+</section>
+
+<!-- ============================= TOC ============================= -->
+<section>
+  <h1>Contents</h1>
+  <div class="toc">
+    <ol>
+      <li><span class="n">0</span>Executive Summary</li>
+      <li><span class="n">1</span>Complete Feature &amp; Functionality Inventory</li>
+      <li><span class="n">2</span>Current Architecture — Honest Assessment</li>
+      <li><span class="n">3</span>The Five Candidate Architectures</li>
+      <li><span class="n">4</span>Side-by-Side Comparison</li>
+      <li><span class="n">5</span>Final Recommendation — Top Two</li>
+      <li><span class="n">6</span>Rebuild Prompt — Option A (AWS Refined)</li>
+      <li><span class="n">7</span>Rebuild Prompt — Option B (GCP Cloud Run)</li>
+      <li><span class="n">8</span>Appendix — Caveats</li>
+      <li><span class="n">9</span>Appendix — Short-Term Fixes If Not Rebuilding Yet</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============================= 0. EXEC ============================= -->
+<section class="pb">
+  <h2>0. Executive Summary</h2>
+  <p>The app is a <strong>multi-tenant B2B distributor ERP</strong> for a New Zealand health-products company. It is approximately <strong>45 pages</strong>, <strong>118 server actions</strong> across 15 action files, <strong>15 distinct reports</strong> (CSV/XLSX/PDF), <strong>30+ Prisma models</strong>, <strong>4 daily cron jobs</strong> pinned to NZT, and a <strong>QuickBooks Online</strong> integration with AES-256-GCM-encrypted refresh tokens. Traffic is small (low tens of users), but report generation is CPU-heavy and transactional writes (inventory moves, reservations, landed-cost allocation) must be correct.</p>
+
+  <p>The current deployment works but has three material problems:</p>
+
+  <div class="callout bad avoid-break">
+    <h4>Three production gaps in the current stack</h4>
+    <ol>
+      <li><strong>ALB is HTTP only</strong>, not HTTPS. Cookies, passwords, and QBO OAuth tokens traverse the public internet unencrypted.</li>
+      <li><strong>Cron jobs are declared in <code>vercel.json</code></strong> but the app runs on AWS ECS. Daily FX refresh, low-stock alerts, QBO sync, and scheduled reports never fire.</li>
+      <li><strong>Secrets live in plain ECS task-definition env vars.</strong> <code>SESSION_SECRET</code>, <code>QBO_ENCRYPTION_KEY</code>, <code>DATABASE_URL</code> are readable by anyone with <code>ecs:DescribeTaskDefinition</code>.</li>
+    </ol>
+  </div>
+
+  <p>Before recommending a rebuild, I note these three issues can all be fixed in a one-week incremental pass on the current stack. A rebuild is only justified if we also want <strong>lower TCO</strong>, <strong>better cold-start economics</strong>, <strong>cleaner separation of concerns</strong>, or <strong>a different cloud for procurement reasons</strong>.</p>
+
+  <h3>Final recommendation</h3>
+  <div class="cols2">
+    <div class="option top col" style="margin:0;">
+      <h3><span class="num">A</span> AWS Refined <span class="tag">Gold pick</span></h3>
+      <p style="font-size:9.5pt; margin-top:0;"><strong>ECS Fargate + HTTPS ALB + RDS + EventBridge Scheduler + Secrets Manager + S3.</strong> Lowest migration cost, retains existing SST/Pulumi IaC, closes all three production gaps, preserves Next.js server actions.</p>
+      <div class="pills">
+        <span class="pill">~$95/mo</span>
+        <span class="pill">~5 days to ship</span>
+        <span class="pill">Zero code rewrite</span>
+      </div>
+    </div>
+    <div class="option top col" style="margin:0;">
+      <h3><span class="num">B</span> GCP Cloud Run <span class="tag">Silver pick</span></h3>
+      <p style="font-size:9.5pt; margin-top:0;"><strong>Cloud Run + Cloud SQL + Cloud Scheduler + Secret Manager + Cloud Storage.</strong> Scale-to-zero economics, simplest operator model, managed HTTPS out of the box.</p>
+      <div class="pills">
+        <span class="pill">~$55/mo</span>
+        <span class="pill">~5–7 days to ship</span>
+        <span class="pill">Cold start &lt;1 s</span>
+      </div>
+    </div>
+  </div>
+
+  <p>The two rebuild prompts in sections 6 and 7 are self-contained and ready to hand to a development team.</p>
+</section>
+
+<!-- ============================= 1. INVENTORY ============================= -->
+<section class="pb">
+  <h2>1. Complete Feature &amp; Functionality Inventory</h2>
+  <p>Every capability here maps to real files in the repo — <code>app/</code>, <code>actions/</code>, <code>lib/</code>, <code>prisma/schema.prisma</code>, <code>app/api/</code>. No marketing text, no guesses.</p>
+
+  <h3>1.1 Identity, Access, and Multi-Tenancy</h3>
+  <div class="feature-grid">
+    <div class="feature-card"><h5>Auth</h5>iron-session v8 cookie, bcryptjs rounds=10. Seal verified server-side in <code>lib/auth.ts</code>. Cookie <code>nz_inv_session</code>, HttpOnly, SameSite=Lax, 30-day TTL.</div>
+    <div class="feature-card"><h5>Login</h5><code>/login</code> email + password → <code>signInAction</code>. No reset email, no rate limiting (gap).</div>
+    <div class="feature-card"><h5>Bootstrap</h5><code>prisma/set-owner-password.ts</code> — idempotent ADMIN user create/rotate.</div>
+    <div class="feature-card"><h5>Middleware</h5><code>middleware.ts</code> cookie-presence redirect; public paths for <code>/login</code>, QBO callback, cron, health.</div>
+    <div class="feature-card"><h5>Roles</h5>ADMIN, MANAGER, STAFF, VIEWER. <code>requireRole()</code> helper.</div>
+    <div class="feature-card"><h5>Multi-tenancy</h5>Every row has <code>tenantId</code>. Enforced in app code only — no Postgres RLS.</div>
+  </div>
+
+  <h3>1.2 Catalog — Products, Pricing, Dimensions</h3>
+  <div class="feature-grid">
+    <div class="feature-card"><h5>Products</h5>CRUD at <code>/products</code>. SKU, name, cost, reorder point/qty, dimensions, weight, brand, channel, territory, image.</div>
+    <div class="feature-card"><h5>Dimensions</h5>Brand / Channel / Territory — three classification axes. <code>/settings/dimensions</code>.</div>
+    <div class="feature-card"><h5>Price Groups</h5>Retail, Wholesale, Trade, VIP (seeded). <code>/settings/price-groups</code>.</div>
+    <div class="feature-card"><h5>Product Prices</h5><code>ProductPrice</code> joins Product × PriceGroup. NZD + effective date.</div>
+    <div class="feature-card"><h5>Stock</h5><code>StockLevel</code> per product: qtyOnHand, qtyReserved, qtyIncoming, derived qtyAvailable / qtyFree.</div>
+    <div class="feature-card"><h5>Batches</h5><code>Batch</code> for batch-tracked products. Used by expiry tracker.</div>
+  </div>
+
+  <h3>1.3 Inventory Movement</h3>
+  <ul>
+    <li><strong>Ledger:</strong> <code>InventoryTransaction</code> rows for RECEIVE, SHIP, ADJUST, TRANSFER, RESERVE, RELEASE.</li>
+    <li><strong>Adjustments:</strong> <code>/inventory</code> page — product search, qty delta, reason. Atomic with StockLevel.</li>
+    <li><strong>Per-product views:</strong> Levels / Transactions / Batches / Pricing / Sales History tabs.</li>
+  </ul>
+
+  <h3>1.4 Purchasing</h3>
+  <ul>
+    <li><strong>PO lifecycle:</strong> <code>DRAFT → SUBMITTED → PARTIAL → RECEIVED → CLOSED → CANCELLED</code>.</li>
+    <li><strong>Foreign currency:</strong> PO header stores currency, fxRate, fxRateDate. Stock costed in NZD at receipt.</li>
+    <li><strong>Landed cost:</strong> <code>PoReceiveCharge</code> for freight/duty/insurance/other, allocated by value or volume in <code>lib/inventory.ts</code>.</li>
+    <li><strong>Receive flow:</strong> RECEIVE transactions + stock increments + status transition.</li>
+    <li><strong>CSV export:</strong> <code>/api/purchase-orders/[id]/csv</code> for supplier hand-off.</li>
+  </ul>
+
+  <h3>1.5 Sales</h3>
+  <ul>
+    <li><strong>Customers:</strong> name, GST number, billing/shipping addresses, payment terms, price group, credit limit, contacts.</li>
+    <li><strong>SO lifecycle:</strong> <code>DRAFT → CONFIRMED → PICKING → SHIPPED → INVOICED → CANCELLED</code>.</li>
+    <li><strong>Reservations:</strong> Confirm creates <code>StockReservation</code> rows, reducing available without touching on-hand.</li>
+    <li><strong>Shipping:</strong> <code>shipSalesOrder</code> — decrements on-hand, releases reservations, writes SHIP transactions.</li>
+    <li><strong>Invoicing + PDFs:</strong> <code>@react-pdf/renderer</code> at <code>/api/sales-orders/[id]/invoice</code>.</li>
+    <li><strong>Exports:</strong> XLSX per SO, packing slip PDFs via <code>lib/pdf.tsx</code>.</li>
+  </ul>
+
+  <h3>1.6 Proforma Invoices &amp; Credit Notes</h3>
+  <ul>
+    <li><strong>Proforma:</strong> <code>/proforma</code> for quotes &amp; pre-payment invoices. Convertible to SO.</li>
+    <li><strong>Credit notes:</strong> linked to an originating SO; optional inventory reversal; PDF rendering.</li>
+  </ul>
+
+  <h3>1.7 Suppliers</h3>
+  <ul>
+    <li>Supplier master + contacts; country, lead-time days, default currency, bank details, tax number.</li>
+    <li>Supplier performance: on-time %, fill rate, price stability (<code>lib/reports/supplier.ts</code>).</li>
+  </ul>
+
+  <h3>1.8 Dashboards</h3>
+  <ul>
+    <li>Root <code>/</code>: KPI tiles (revenue MTD, profit MTD, open POs/SOs, low stock), recent activity, stocked-value by brand (Recharts).</li>
+    <li><code>/reports</code> overview: revenue / cost / margin trend for fiscal year.</li>
+  </ul>
+
+  <h3>1.9 Reports (15 distinct)</h3>
+  <div class="feature-grid">
+    <div class="feature-card"><h5>actual-vs-budget</h5>Monthly actual vs <code>Budget</code>, variance % red/green.</div>
+    <div class="feature-card"><h5>brand-breakdown</h5>Revenue &amp; margin by brand, stacked bar.</div>
+    <div class="feature-card"><h5>channel-trends</h5>Revenue by channel over fiscal months.</div>
+    <div class="feature-card"><h5>container-planning</h5>Group PO lines by supplier shipment.</div>
+    <div class="feature-card"><h5>customer-sales</h5>Per-customer revenue, gross margin, lines.</div>
+    <div class="feature-card"><h5>customer-trends</h5>Top N customers, month-over-month.</div>
+    <div class="feature-card"><h5>expiry-tracker</h5>Batches expiring within X months.</div>
+    <div class="feature-card"><h5>monthly-sales</h5>Revenue / cost / margin per month.</div>
+    <div class="feature-card"><h5>overstock</h5>Products above months-on-hand threshold.</div>
+    <div class="feature-card"><h5>reorder-planner</h5>At/below reorder point, suggested qty.</div>
+    <div class="feature-card"><h5>rep-performance</h5>Revenue &amp; margin by sales rep.</div>
+    <div class="feature-card"><h5>stock-on-hand</h5>Snapshot valued at latest cost.</div>
+    <div class="feature-card"><h5>stock-turn</h5>Annualised inventory turnover.</div>
+    <div class="feature-card"><h5>supplier-eta</h5>Open PO lines + expected arrivals.</div>
+    <div class="feature-card"><h5>tester-tracker</h5>Tester products, consumption &amp; remaining.</div>
+  </div>
+  <p style="font-size:9.5pt; color: var(--muted);">Compute in <code>lib/reports/</code> — <code>margin.ts</code>, <code>inventory.ts</code>, <code>supplier.ts</code>, <code>trends.ts</code> — shared helpers <code>xlsx.ts</code> (ExcelJS) and <code>pdf.tsx</code> (@react-pdf).</p>
+
+  <h3>1.10 Settings (8 admin pages)</h3>
+  <div class="pills">
+    <span class="pill">users</span>
+    <span class="pill">price-groups</span>
+    <span class="pill">dimensions</span>
+    <span class="pill">budgets</span>
+    <span class="pill">tax</span>
+    <span class="pill">quickbooks</span>
+    <span class="pill">reports</span>
+    <span class="pill">audit</span>
+  </div>
+
+  <h3>1.11 QuickBooks Online Integration</h3>
+  <ul>
+    <li><strong>OAuth 2.0:</strong> <code>/api/qbo/connect</code> + <code>/api/qbo/callback</code>. Refresh token AES-256-GCM encrypted with <code>QBO_ENCRYPTION_KEY</code> (32-byte).</li>
+    <li><strong>Sync queue:</strong> <code>QboSyncJob</code> + <code>lib/quickbooks/sync.ts</code>. Pushes invoices, payments, customers. 5 retries with exponential backoff.</li>
+    <li><strong>Daily drain:</strong> <code>/api/cron/qbo-sync</code> at 08:00 NZT.</li>
+  </ul>
+
+  <h3>1.12 Cron Jobs (declared, currently not firing)</h3>
+  <div class="callout warn">
+    <p style="margin:0;">Declared in <code>vercel.json</code> but the app runs on ECS. <strong>These do not fire in production today.</strong></p>
+  </div>
+  <table class="avoid-break">
+    <thead><tr><th>Job</th><th>Time (NZT)</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>/api/cron/qbo-sync</code></td><td>08:00</td><td>Drain QBO sync queue</td></tr>
+      <tr><td><code>/api/cron/low-stock</code></td><td>19:00</td><td>Find products below reorder point, email via Resend</td></tr>
+      <tr><td><code>/api/cron/fx-rates</code></td><td>18:00</td><td>Fetch yesterday's ECB NZD rates from Frankfurter.app, upsert <code>ExchangeRate</code></td></tr>
+      <tr><td><code>/api/cron/reports</code></td><td>07:00</td><td>Render due <code>ScheduledReport</code> rows, email, write <code>ReportDelivery</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>1.13 Data Model Summary <span class="badge">30+ models, 717 lines in schema.prisma</span></h3>
+  <div class="feature-grid">
+    <div class="feature-card"><h5>Tenancy &amp; identity</h5>Tenant, User</div>
+    <div class="feature-card"><h5>Catalog</h5>Product, Brand, Channel, Territory, PriceGroup, ProductPrice</div>
+    <div class="feature-card"><h5>Inventory</h5>StockLevel, InventoryTransaction, Batch, StockReservation</div>
+    <div class="feature-card"><h5>Purchasing</h5>Supplier, SupplierContact, PurchaseOrder, PurchaseOrderLine, PoReceiveCharge</div>
+    <div class="feature-card"><h5>Sales</h5>Customer, CustomerContact, SalesOrder, SalesOrderLine</div>
+    <div class="feature-card"><h5>Proforma / Credits</h5>ProformaInvoice + line, CreditNote + line</div>
+    <div class="feature-card"><h5>Planning &amp; Reporting</h5>Budget, ReportSnapshot, ScheduledReport, ReportDelivery</div>
+    <div class="feature-card"><h5>External integration</h5>QboConnection, QboSyncJob, ExchangeRate</div>
+  </div>
+
+  <h3>1.14 Non-Functional Behaviour</h3>
+  <ul>
+    <li><strong>Fiscal year:</strong> NZ standard April 1 → March 31.</li>
+    <li><strong>Timezone:</strong> NZT (Pacific/Auckland). All cron schedules and date formatting use <code>date-fns-tz</code>.</li>
+    <li><strong>Currencies:</strong> NZD base. POs in any currency, FX rate captured per PO.</li>
+    <li><strong>Rounding:</strong> GST &amp; totals to 2 dp.</li>
+    <li><strong>Testing:</strong> Vitest in <code>__tests__/lib/</code> covers utils, currency, constants. Coverage is thin.</li>
+  </ul>
+</section>
+
+<!-- ============================= 2. CURRENT STACK ============================= -->
+<section class="pb">
+  <h2>2. Current Architecture — Honest Assessment</h2>
+
+  <h3>Current topology</h3>
+  <div class="diagram avoid-break">
+    <svg viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+        </marker>
+      </defs>
+      <!-- Users -->
+      <rect x="20" y="110" width="100" height="42" rx="6" fill="#e5e7eb" stroke="#94a3b8" stroke-width="1.5"/>
+      <text x="70" y="128" font-size="12" font-weight="600" text-anchor="middle" fill="#111827">Users (NZ)</text>
+      <text x="70" y="144" font-size="9" text-anchor="middle" fill="#4b5563">Browser</text>
+
+      <!-- ALB -->
+      <rect x="170" y="110" width="130" height="42" rx="6" fill="#fef3c7" stroke="#b45309" stroke-width="2" stroke-dasharray="4,2"/>
+      <text x="235" y="128" font-size="12" font-weight="600" text-anchor="middle" fill="#92400e">ALB (HTTP :80)</text>
+      <text x="235" y="144" font-size="9" text-anchor="middle" fill="#92400e">no TLS — GAP</text>
+
+      <!-- Fargate -->
+      <rect x="350" y="65" width="140" height="42" rx="6" fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"/>
+      <text x="420" y="83" font-size="12" font-weight="600" text-anchor="middle" fill="#1e40af">ECS Fargate arm64</text>
+      <text x="420" y="99" font-size="9" text-anchor="middle" fill="#1e40af">0.25 vCPU · 0.5 GB · 1 task</text>
+
+      <!-- RDS -->
+      <rect x="350" y="155" width="140" height="42" rx="6" fill="#fed7aa" stroke="#ea580c" stroke-width="2" stroke-dasharray="4,2"/>
+      <text x="420" y="173" font-size="12" font-weight="600" text-anchor="middle" fill="#9a3412">RDS Postgres 16</text>
+      <text x="420" y="189" font-size="9" text-anchor="middle" fill="#9a3412">db.t4g.micro · PUBLIC — GAP</text>
+
+      <!-- External -->
+      <rect x="560" y="30" width="160" height="28" rx="4" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1"/>
+      <text x="640" y="48" font-size="10" text-anchor="middle" fill="#374151">Frankfurter.app (FX)</text>
+
+      <rect x="560" y="65" width="160" height="28" rx="4" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1"/>
+      <text x="640" y="83" font-size="10" text-anchor="middle" fill="#374151">QBO API (sandbox)</text>
+
+      <rect x="560" y="100" width="160" height="28" rx="4" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1"/>
+      <text x="640" y="118" font-size="10" text-anchor="middle" fill="#374151">Resend (email)</text>
+
+      <rect x="560" y="135" width="160" height="28" rx="4" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1"/>
+      <text x="640" y="153" font-size="10" text-anchor="middle" fill="#374151">Supabase Storage (images)</text>
+
+      <!-- Crons (broken) -->
+      <rect x="170" y="200" width="320" height="34" rx="4" fill="#fee2e2" stroke="#b91c1c" stroke-width="1.5" stroke-dasharray="3,3"/>
+      <text x="330" y="220" font-size="10" font-weight="600" text-anchor="middle" fill="#991b1b">vercel.json crons — NOT FIRING (app is not on Vercel)</text>
+
+      <!-- Arrows -->
+      <line x1="120" y1="131" x2="168" y2="131" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <line x1="300" y1="125" x2="350" y2="90" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <line x1="420" y1="107" x2="420" y2="155" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+      <line x1="490" y1="86" x2="558" y2="79" stroke="#64748b" stroke-width="1.2" marker-end="url(#arrowhead)"/>
+      <line x1="490" y1="90" x2="558" y2="114" stroke="#64748b" stroke-width="1.2" marker-end="url(#arrowhead)"/>
+      <line x1="490" y1="95" x2="558" y2="45" stroke="#64748b" stroke-width="1.2" marker-end="url(#arrowhead)"/>
+      <line x1="490" y1="100" x2="558" y2="148" stroke="#64748b" stroke-width="1.2" marker-end="url(#arrowhead)"/>
+    </svg>
+    <div class="caption">Current deployment in <code>ap-southeast-2</code>. Dashed red/amber boxes flag the production gaps.</div>
+  </div>
+
+  <h3>What works</h3>
+  <ul>
+    <li>Single codebase, single deployment unit. Next.js + Prisma on one container.</li>
+    <li>Server Actions + Prisma combo is highly productive for CRUD-heavy ERP — 118 actions across 15 files.</li>
+    <li>Multi-tenant enforcement consistent — every action starts with <code>requireSession()</code> and scopes by <code>tenantId</code>.</li>
+    <li>Schema is clean — 30 models, proper <code>tenantId</code> indexes.</li>
+    <li>IaC is TypeScript (SST/Pulumi). arm64 Fargate is ~20% cheaper than x86.</li>
+  </ul>
+
+  <h3>What doesn't work — the gap list</h3>
+  <table class="avoid-break">
+    <thead><tr><th>#</th><th>Gap</th><th>Impact</th><th>Severity</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>ALB is HTTP only</td><td>Passwords &amp; session cookies in the clear</td><td><span class="badge bad">Critical</span></td></tr>
+      <tr><td>2</td><td>Cron jobs don't fire (Vercel declarations on ECS)</td><td>No daily FX, no low-stock alerts, no QBO sync, no scheduled reports</td><td><span class="badge bad">Critical</span></td></tr>
+      <tr><td>3</td><td>Secrets in plain env</td><td>Anyone with <code>ecs:DescribeTaskDefinition</code> reads them</td><td><span class="badge bad">Critical</span></td></tr>
+      <tr><td>4</td><td>RDS publicly accessible</td><td>Only SG ingress rule protects Postgres port</td><td><span class="badge warn">High</span></td></tr>
+      <tr><td>5</td><td><code>prisma db push --accept-data-loss</code> on every start</td><td>Bad schema edit = lost data on next deploy</td><td><span class="badge warn">High</span></td></tr>
+      <tr><td>6</td><td>No backups strategy beyond RDS defaults</td><td>Recovery is a prayer</td><td><span class="badge warn">High</span></td></tr>
+      <tr><td>7</td><td>No alarms / logging</td><td>No visibility into 5xx, DB saturation, cron failures</td><td><span class="badge warn">Medium</span></td></tr>
+      <tr><td>8</td><td>No CI/CD</td><td>Manual deploys = human error</td><td><span class="badge warn">Medium</span></td></tr>
+      <tr><td>9</td><td>Single-AZ RDS</td><td>Zone outage = downtime</td><td><span class="badge">Medium</span></td></tr>
+      <tr><td>10</td><td>Single Fargate task minimum</td><td>Crash loop = full outage</td><td><span class="badge">Medium</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>App profile — what matters for architecture choice</h3>
+  <div class="cols2">
+    <div class="col">
+      <ul>
+        <li><strong>Low concurrent load</strong> — single-digit users typically.</li>
+        <li><strong>Bursty CPU</strong> — report gen 1–5 s of @react-pdf / ExcelJS work.</li>
+        <li><strong>Transactional writes</strong> — stock moves, reservations, landed cost must be ACID.</li>
+      </ul>
+    </div>
+    <div class="col">
+      <ul>
+        <li><strong>Scheduled compute</strong> — four fixed NZT crons daily.</li>
+        <li><strong>Data-critical ledger</strong> — the business lives in Postgres.</li>
+        <li><strong>Single locality</strong> — all users NZ/AU. No global CDN value.</li>
+        <li><strong>Small team</strong> — 1 dev. Ops overhead must be ≈ zero.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================= 3. FIVE OPTIONS ============================= -->
+<section class="pb">
+  <h2>3. Five Candidate Architectures</h2>
+  <p>Each option: topology, services, what changes, strengths, weaknesses, indicative monthly cost. Costs are on-demand list prices for <code>ap-southeast-2</code> / <code>australia-east</code> / <code>australia-southeast1</code> with no commitments.</p>
+
+  <!-- Option 1 -->
+  <div class="option top">
+    <h3><span class="num">1</span> AWS Refined — Container + RDS, done properly <span class="tag">Recommended · Gold</span></h3>
+    <p>Same shape as today, every rough edge removed.</p>
+
+    <div class="diagram avoid-break">
+      <svg viewBox="0 0 780 290" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="a1" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+          </marker>
+        </defs>
+        <!-- Users -->
+        <rect x="10" y="125" width="80" height="38" rx="6" fill="#e5e7eb" stroke="#94a3b8"/>
+        <text x="50" y="148" font-size="11" font-weight="600" text-anchor="middle" fill="#111827">Users</text>
+
+        <!-- Route 53 -->
+        <rect x="110" y="125" width="90" height="38" rx="6" fill="#e9d5ff" stroke="#7c3aed"/>
+        <text x="155" y="143" font-size="10" font-weight="600" text-anchor="middle" fill="#5b21b6">Route 53</text>
+        <text x="155" y="156" font-size="9" text-anchor="middle" fill="#5b21b6">DNS</text>
+
+        <!-- CloudFront -->
+        <rect x="215" y="125" width="95" height="38" rx="6" fill="#e9d5ff" stroke="#7c3aed"/>
+        <text x="262" y="143" font-size="10" font-weight="600" text-anchor="middle" fill="#5b21b6">CloudFront</text>
+        <text x="262" y="156" font-size="9" text-anchor="middle" fill="#5b21b6">CDN + HTTPS</text>
+
+        <!-- ALB -->
+        <rect x="325" y="125" width="95" height="38" rx="6" fill="#dcfce7" stroke="#15803d"/>
+        <text x="372" y="143" font-size="10" font-weight="600" text-anchor="middle" fill="#14532d">ALB :443</text>
+        <text x="372" y="156" font-size="9" text-anchor="middle" fill="#14532d">ACM cert</text>
+
+        <!-- VPC box -->
+        <rect x="430" y="20" width="340" height="255" rx="8" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="5,4"/>
+        <text x="435" y="35" font-size="9" fill="#64748b">VPC — 2 AZ · private subnets</text>
+
+        <!-- Fargate -->
+        <rect x="445" y="80" width="140" height="42" rx="6" fill="#dbeafe" stroke="#2563eb"/>
+        <text x="515" y="98" font-size="11" font-weight="600" text-anchor="middle" fill="#1e40af">ECS Fargate</text>
+        <text x="515" y="112" font-size="9" text-anchor="middle" fill="#1e40af">0.5 vCPU · 1 GB · 1–3</text>
+
+        <!-- RDS Multi-AZ -->
+        <rect x="445" y="145" width="140" height="42" rx="6" fill="#fed7aa" stroke="#ea580c"/>
+        <text x="515" y="162" font-size="11" font-weight="600" text-anchor="middle" fill="#9a3412">RDS multi-AZ</text>
+        <text x="515" y="176" font-size="9" text-anchor="middle" fill="#9a3412">db.t4g.small · PITR</text>
+
+        <!-- Secrets Manager -->
+        <rect x="615" y="80" width="140" height="30" rx="4" fill="#fee2e2" stroke="#b91c1c"/>
+        <text x="685" y="99" font-size="10" font-weight="600" text-anchor="middle" fill="#991b1b">Secrets Manager</text>
+
+        <!-- S3 -->
+        <rect x="615" y="120" width="140" height="30" rx="4" fill="#bbf7d0" stroke="#15803d"/>
+        <text x="685" y="139" font-size="10" font-weight="600" text-anchor="middle" fill="#166534">S3 reports + images</text>
+
+        <!-- EventBridge -->
+        <rect x="615" y="170" width="140" height="30" rx="4" fill="#fce7f3" stroke="#be185d"/>
+        <text x="685" y="189" font-size="10" font-weight="600" text-anchor="middle" fill="#9f1239">EventBridge Sched</text>
+
+        <!-- Cron RunTask -->
+        <rect x="615" y="210" width="140" height="30" rx="4" fill="#dbeafe" stroke="#2563eb"/>
+        <text x="685" y="229" font-size="10" font-weight="600" text-anchor="middle" fill="#1e40af">ECS RunTask (cron)</text>
+
+        <!-- Observability -->
+        <rect x="445" y="220" width="140" height="30" rx="4" fill="#f3f4f6" stroke="#9ca3af"/>
+        <text x="515" y="239" font-size="10" font-weight="600" text-anchor="middle" fill="#374151">CloudWatch</text>
+
+        <!-- arrows -->
+        <line x1="90" y1="144" x2="108" y2="144" stroke="#64748b" stroke-width="1.2" marker-end="url(#a1)"/>
+        <line x1="200" y1="144" x2="213" y2="144" stroke="#64748b" stroke-width="1.2" marker-end="url(#a1)"/>
+        <line x1="310" y1="144" x2="323" y2="144" stroke="#64748b" stroke-width="1.2" marker-end="url(#a1)"/>
+        <line x1="420" y1="144" x2="445" y2="102" stroke="#64748b" stroke-width="1.2" marker-end="url(#a1)"/>
+        <line x1="515" y1="122" x2="515" y2="145" stroke="#64748b" stroke-width="1.2" marker-end="url(#a1)"/>
+        <line x1="585" y1="95" x2="613" y2="95" stroke="#64748b" stroke-width="1" stroke-dasharray="2,2" marker-end="url(#a1)"/>
+        <line x1="585" y1="110" x2="613" y2="135" stroke="#64748b" stroke-width="1" stroke-dasharray="2,2" marker-end="url(#a1)"/>
+        <line x1="685" y1="200" x2="685" y2="208" stroke="#64748b" stroke-width="1.2" marker-end="url(#a1)"/>
+        <line x1="615" y1="225" x2="586" y2="115" stroke="#64748b" stroke-width="1" stroke-dasharray="2,2" marker-end="url(#a1)"/>
+      </svg>
+      <div class="caption">Option 1 topology — existing shape with HTTPS, private DB, Secrets Manager, real cron, CloudWatch.</div>
+    </div>
+
+    <div class="cols2">
+      <div class="strengths col">
+        <h4 style="margin-top:0;">Strengths</h4>
+        <ul>
+          <li>Smallest migration distance. Server Actions, Prisma, domain code unchanged.</li>
+          <li>Retains team know-how; developer keeps AWS / SST / Pulumi.</li>
+          <li>Closes every known production gap in one release.</li>
+          <li>Multi-AZ RDS removes single-zone outage risk.</li>
+          <li>arm64 Fargate keeps the price/performance advantage.</li>
+        </ul>
+      </div>
+      <div class="weaknesses col">
+        <h4 style="margin-top:0;">Weaknesses</h4>
+        <ul>
+          <li>Always-on Fargate — pays for idle compute 24/7.</li>
+          <li>Four-hop edge (Route 53 → CloudFront → ALB → Fargate) adds ~30 ms.</li>
+          <li>NAT Gateway adds ~$32/mo once RDS is private.</li>
+          <li>Broad operational surface area (10+ services in IaC).</li>
+        </ul>
+      </div>
+    </div>
+
+    <h4 style="margin-top:10pt;">Indicative monthly cost</h4>
+    <table>
+      <thead><tr><th>Component</th><th style="text-align:right;">$ / month</th></tr></thead>
+      <tbody>
+        <tr><td>Fargate 0.5 vCPU / 1 GB, 1 task</td><td style="text-align:right;">~18</td></tr>
+        <tr><td>ALB</td><td style="text-align:right;">~22</td></tr>
+        <tr><td>CloudFront (low traffic)</td><td style="text-align:right;">~1</td></tr>
+        <tr><td>RDS db.t4g.small multi-AZ, 20 GB gp3</td><td style="text-align:right;">~45</td></tr>
+        <tr><td>NAT Gateway + data</td><td style="text-align:right;">~35</td></tr>
+        <tr><td>S3 + storage + requests</td><td style="text-align:right;">~2</td></tr>
+        <tr><td>Secrets Manager (6 secrets) + CW + Route 53 + ACM</td><td style="text-align:right;">~8</td></tr>
+        <tr class="total"><td>Total (multi-AZ)</td><td style="text-align:right;">~$131</td></tr>
+        <tr class="total"><td>Total (single-AZ — accept zone risk)</td><td style="text-align:right;">~$95</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Option 2 -->
+  <div class="option">
+    <h3><span class="num">2</span> AWS Serverless — OpenNext + Aurora Serverless v2</h3>
+    <p>Next.js runs on Lambda via OpenNext; Postgres is Aurora Serverless v2; no always-on compute.</p>
+
+    <div class="diagram avoid-break">
+      <svg viewBox="0 0 780 220" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="a2" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+          </marker>
+        </defs>
+        <rect x="10" y="90" width="70" height="38" rx="6" fill="#e5e7eb" stroke="#94a3b8"/>
+        <text x="45" y="113" font-size="11" font-weight="600" text-anchor="middle" fill="#111827">Users</text>
+
+        <rect x="100" y="90" width="110" height="38" rx="6" fill="#e9d5ff" stroke="#7c3aed"/>
+        <text x="155" y="108" font-size="10" font-weight="600" text-anchor="middle" fill="#5b21b6">CloudFront</text>
+        <text x="155" y="121" font-size="9" text-anchor="middle" fill="#5b21b6">HTTPS</text>
+
+        <rect x="230" y="90" width="140" height="38" rx="6" fill="#dbeafe" stroke="#2563eb"/>
+        <text x="300" y="108" font-size="11" font-weight="600" text-anchor="middle" fill="#1e40af">Lambda (OpenNext)</text>
+        <text x="300" y="121" font-size="9" text-anchor="middle" fill="#1e40af">per-request compute</text>
+
+        <rect x="390" y="90" width="110" height="38" rx="6" fill="#f3f4f6" stroke="#6b7280"/>
+        <text x="445" y="108" font-size="10" font-weight="600" text-anchor="middle" fill="#111827">RDS Proxy</text>
+        <text x="445" y="121" font-size="9" text-anchor="middle" fill="#374151">conn pool</text>
+
+        <rect x="520" y="90" width="160" height="38" rx="6" fill="#fed7aa" stroke="#ea580c"/>
+        <text x="600" y="108" font-size="11" font-weight="600" text-anchor="middle" fill="#9a3412">Aurora Serverless v2</text>
+        <text x="600" y="121" font-size="9" text-anchor="middle" fill="#9a3412">0.5–4 ACU autoscale</text>
+
+        <rect x="230" y="160" width="140" height="38" rx="6" fill="#fce7f3" stroke="#be185d"/>
+        <text x="300" y="178" font-size="10" font-weight="600" text-anchor="middle" fill="#9f1239">EventBridge Sched</text>
+        <text x="300" y="191" font-size="9" text-anchor="middle" fill="#9f1239">4× cron</text>
+
+        <rect x="390" y="160" width="140" height="38" rx="6" fill="#dbeafe" stroke="#2563eb"/>
+        <text x="460" y="178" font-size="10" font-weight="600" text-anchor="middle" fill="#1e40af">Lambda (cron)</text>
+
+        <rect x="550" y="160" width="130" height="38" rx="6" fill="#bbf7d0" stroke="#15803d"/>
+        <text x="615" y="178" font-size="10" font-weight="600" text-anchor="middle" fill="#166534">S3 artifacts</text>
+
+        <line x1="80" y1="109" x2="98" y2="109" stroke="#64748b" stroke-width="1.2" marker-end="url(#a2)"/>
+        <line x1="210" y1="109" x2="228" y2="109" stroke="#64748b" stroke-width="1.2" marker-end="url(#a2)"/>
+        <line x1="370" y1="109" x2="388" y2="109" stroke="#64748b" stroke-width="1.2" marker-end="url(#a2)"/>
+        <line x1="500" y1="109" x2="518" y2="109" stroke="#64748b" stroke-width="1.2" marker-end="url(#a2)"/>
+        <line x1="370" y1="179" x2="388" y2="179" stroke="#64748b" stroke-width="1.2" marker-end="url(#a2)"/>
+        <line x1="530" y1="179" x2="548" y2="179" stroke="#64748b" stroke-width="1.2" marker-end="url(#a2)"/>
+        <line x1="460" y1="160" x2="445" y2="130" stroke="#64748b" stroke-width="1" stroke-dasharray="2,2" marker-end="url(#a2)"/>
+      </svg>
+    </div>
+
+    <div class="cols2">
+      <div class="strengths col">
+        <h4 style="margin-top:0;">Strengths</h4>
+        <ul>
+          <li>True per-request compute billing; idle nights ≈ $0.</li>
+          <li>Automatic scale-out for bursts.</li>
+          <li>No container image to maintain.</li>
+          <li>Aurora Serverless v2 scales to hundreds of tenants without re-architecting.</li>
+        </ul>
+      </div>
+      <div class="weaknesses col">
+        <h4 style="margin-top:0;">Weaknesses</h4>
+        <ul>
+          <li>Cold starts: 1–3 s for first hit after idle.</li>
+          <li>Aurora floor: 0.5 ACU min ≈ $43/mo (cannot pause).</li>
+          <li>Prisma-on-Lambda quirks (connection limit, binary target).</li>
+          <li>OpenNext is an extra abstraction that can break on Next.js minor versions.</li>
+          <li>Observability fragmentation across Lambda log groups.</li>
+        </ul>
+      </div>
+    </div>
+    <p><strong>Indicative total:</strong> ~$70 / month (mostly Aurora + Proxy).</p>
+  </div>
+
+  <!-- Option 3 -->
+  <div class="option pb">
+    <h3><span class="num">3</span> Azure Container Apps — Microsoft Stack</h3>
+    <p>Container Apps (scale-to-zero) + Flexible Postgres + Container Apps Jobs for crons.</p>
+
+    <div class="diagram avoid-break">
+      <svg viewBox="0 0 780 210" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="a3" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+          </marker>
+        </defs>
+        <rect x="10" y="90" width="70" height="38" rx="6" fill="#e5e7eb" stroke="#94a3b8"/>
+        <text x="45" y="113" font-size="11" font-weight="600" text-anchor="middle">Users</text>
+
+        <rect x="100" y="90" width="120" height="38" rx="6" fill="#e9d5ff" stroke="#7c3aed"/>
+        <text x="160" y="108" font-size="10" font-weight="600" text-anchor="middle" fill="#5b21b6">Azure Front Door</text>
+        <text x="160" y="121" font-size="9" text-anchor="middle" fill="#5b21b6">HTTPS + CDN + WAF</text>
+
+        <rect x="240" y="90" width="150" height="38" rx="6" fill="#dbeafe" stroke="#2563eb"/>
+        <text x="315" y="108" font-size="11" font-weight="600" text-anchor="middle" fill="#1e40af">Container Apps</text>
+        <text x="315" y="121" font-size="9" text-anchor="middle" fill="#1e40af">scale 0 → N</text>
+
+        <rect x="410" y="90" width="190" height="38" rx="6" fill="#fed7aa" stroke="#ea580c"/>
+        <text x="505" y="108" font-size="11" font-weight="600" text-anchor="middle" fill="#9a3412">PostgreSQL Flexible Server</text>
+        <text x="505" y="121" font-size="9" text-anchor="middle" fill="#9a3412">B1ms · private endpoint</text>
+
+        <rect x="620" y="60" width="130" height="30" rx="4" fill="#fee2e2" stroke="#b91c1c"/>
+        <text x="685" y="79" font-size="10" font-weight="600" text-anchor="middle" fill="#991b1b">Key Vault</text>
+
+        <rect x="620" y="95" width="130" height="30" rx="4" fill="#bbf7d0" stroke="#15803d"/>
+        <text x="685" y="114" font-size="10" font-weight="600" text-anchor="middle" fill="#166534">Blob Storage</text>
+
+        <rect x="620" y="130" width="130" height="30" rx="4" fill="#fce7f3" stroke="#be185d"/>
+        <text x="685" y="149" font-size="10" font-weight="600" text-anchor="middle" fill="#9f1239">CA Jobs (cron)</text>
+
+        <line x1="80" y1="109" x2="98" y2="109" stroke="#64748b" marker-end="url(#a3)"/>
+        <line x1="220" y1="109" x2="238" y2="109" stroke="#64748b" marker-end="url(#a3)"/>
+        <line x1="390" y1="109" x2="408" y2="109" stroke="#64748b" marker-end="url(#a3)"/>
+        <line x1="390" y1="109" x2="618" y2="78" stroke="#64748b" stroke-width="1" stroke-dasharray="2,2" marker-end="url(#a3)"/>
+        <line x1="390" y1="109" x2="618" y2="112" stroke="#64748b" stroke-width="1" stroke-dasharray="2,2" marker-end="url(#a3)"/>
+        <line x1="685" y1="160" x2="600" y2="128" stroke="#64748b" stroke-width="1" stroke-dasharray="2,2" marker-end="url(#a3)"/>
+      </svg>
+    </div>
+
+    <div class="cols2">
+      <div class="strengths col">
+        <h4 style="margin-top:0;">Strengths</h4>
+        <ul>
+          <li>Scale-to-zero — idle overnight = storage only.</li>
+          <li>Managed HTTPS via Front Door is a one-liner.</li>
+          <li>CA Jobs is a cleaner cron primitive than EventBridge → RunTask.</li>
+          <li>Enterprise fit: if NZ targets are M365-aligned, Entra ID SSO is easy.</li>
+          <li>B1ms DB is cheap (~$18/mo).</li>
+        </ul>
+      </div>
+      <div class="weaknesses col">
+        <h4 style="margin-top:0;">Weaknesses</h4>
+        <ul>
+          <li>Cold starts 1–3 s on scale-from-zero.</li>
+          <li>Team has no stated Azure experience — ~1 week ramp.</li>
+          <li>Front Door egress is higher than CloudFront at low volume.</li>
+          <li>Private endpoint + VNet setup is more wizardry than AWS.</li>
+          <li>Fewer reliable AI-agent MCPs, more portal clicks.</li>
+        </ul>
+      </div>
+    </div>
+    <p><strong>Indicative total:</strong> ~$40–74 / month depending on Front Door inclusion.</p>
+  </div>
+
+  <!-- Option 4 -->
+  <div class="option top">
+    <h3><span class="num">4</span> GCP Cloud Run + Cloud SQL — Simplest, Lowest TCO <span class="tag">Recommended · Silver</span></h3>
+    <p>Cloud Run containers + Cloud SQL + Cloud Scheduler pulling HTTPS endpoints.</p>
+
+    <div class="diagram avoid-break">
+      <svg viewBox="0 0 780 220" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="a4" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+          </marker>
+        </defs>
+        <rect x="10" y="90" width="70" height="38" rx="6" fill="#e5e7eb" stroke="#94a3b8"/>
+        <text x="45" y="113" font-size="11" font-weight="600" text-anchor="middle">Users</text>
+
+        <rect x="100" y="90" width="140" height="38" rx="6" fill="#e9d5ff" stroke="#7c3aed"/>
+        <text x="170" y="108" font-size="10" font-weight="600" text-anchor="middle" fill="#5b21b6">HTTPS Load Balancer</text>
+        <text x="170" y="121" font-size="9" text-anchor="middle" fill="#5b21b6">Managed cert · Cloud Armor</text>
+
+        <rect x="260" y="90" width="120" height="38" rx="6" fill="#dbeafe" stroke="#2563eb"/>
+        <text x="320" y="108" font-size="11" font-weight="600" text-anchor="middle" fill="#1e40af">Cloud Run</text>
+        <text x="320" y="121" font-size="9" text-anchor="middle" fill="#1e40af">2nd gen · 0 → 5</text>
+
+        <rect x="400" y="90" width="120" height="38" rx="6" fill="#f3f4f6" stroke="#6b7280"/>
+        <text x="460" y="108" font-size="10" font-weight="600" text-anchor="middle" fill="#111827">VPC Connector</text>
+        <text x="460" y="121" font-size="9" text-anchor="middle" fill="#374151">/28 serverless</text>
+
+        <rect x="540" y="90" width="140" height="38" rx="6" fill="#fed7aa" stroke="#ea580c"/>
+        <text x="610" y="108" font-size="11" font-weight="600" text-anchor="middle" fill="#9a3412">Cloud SQL (HA)</text>
+        <text x="610" y="121" font-size="9" text-anchor="middle" fill="#9a3412">db-g1-small · private IP</text>
+
+        <rect x="260" y="160" width="120" height="38" rx="6" fill="#fce7f3" stroke="#be185d"/>
+        <text x="320" y="178" font-size="10" font-weight="600" text-anchor="middle" fill="#9f1239">Cloud Scheduler</text>
+        <text x="320" y="191" font-size="9" text-anchor="middle" fill="#9f1239">4× NZT cron</text>
+
+        <rect x="400" y="160" width="140" height="30" rx="4" fill="#fee2e2" stroke="#b91c1c"/>
+        <text x="470" y="179" font-size="10" font-weight="600" text-anchor="middle" fill="#991b1b">Secret Manager</text>
+
+        <rect x="560" y="160" width="120" height="30" rx="4" fill="#bbf7d0" stroke="#15803d"/>
+        <text x="620" y="179" font-size="10" font-weight="600" text-anchor="middle" fill="#166534">Cloud Storage</text>
+
+        <line x1="80" y1="109" x2="98" y2="109" stroke="#64748b" marker-end="url(#a4)"/>
+        <line x1="240" y1="109" x2="258" y2="109" stroke="#64748b" marker-end="url(#a4)"/>
+        <line x1="380" y1="109" x2="398" y2="109" stroke="#64748b" marker-end="url(#a4)"/>
+        <line x1="520" y1="109" x2="538" y2="109" stroke="#64748b" marker-end="url(#a4)"/>
+        <line x1="320" y1="160" x2="320" y2="130" stroke="#64748b" stroke-width="1" stroke-dasharray="2,2" marker-end="url(#a4)"/>
+        <line x1="320" y1="140" x2="400" y2="175" stroke="#64748b" stroke-width="1" stroke-dasharray="2,2" marker-end="url(#a4)"/>
+        <line x1="320" y1="140" x2="560" y2="175" stroke="#64748b" stroke-width="1" stroke-dasharray="2,2" marker-end="url(#a4)"/>
+      </svg>
+    </div>
+
+    <div class="cols2">
+      <div class="strengths col">
+        <h4 style="margin-top:0;">Strengths</h4>
+        <ul>
+          <li>Scale-to-zero with industry-leading cold starts (200–800 ms).</li>
+          <li>Managed HTTPS is a one-liner; certs auto-issue.</li>
+          <li>Cloud Scheduler is the cleanest cron primitive of the five.</li>
+          <li>Lowest idle cost: ~$30/mo at genuinely low usage.</li>
+          <li>Simplest operator model for a 1-dev team.</li>
+        </ul>
+      </div>
+      <div class="weaknesses col">
+        <h4 style="margin-top:0;">Weaknesses</h4>
+        <ul>
+          <li>Cloud SQL connector / VPC connector adds a step.</li>
+          <li>Less NZ SME procurement familiarity than AWS/Azure.</li>
+          <li>No NZ region — Sydney (australia-southeast1) is nearest.</li>
+          <li>Team has no stated GCP experience — ~1 week ramp.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h4>Indicative monthly cost</h4>
+    <table>
+      <thead><tr><th>Component</th><th style="text-align:right;">$ / month</th></tr></thead>
+      <tbody>
+        <tr><td>Cloud Run (low CPU seconds)</td><td style="text-align:right;">~3</td></tr>
+        <tr><td>Cloud SQL db-g1-small HA, 20 GB SSD</td><td style="text-align:right;">~28</td></tr>
+        <tr><td>Serverless VPC Connector (min)</td><td style="text-align:right;">~10</td></tr>
+        <tr><td>HTTPS Load Balancer (global)</td><td style="text-align:right;">~18</td></tr>
+        <tr><td>Cloud Storage + Secret Manager + Logging</td><td style="text-align:right;">~4</td></tr>
+        <tr><td>Cloud Scheduler (4 jobs, free tier)</td><td style="text-align:right;">0</td></tr>
+        <tr><td>Egress</td><td style="text-align:right;">~2</td></tr>
+        <tr class="total"><td>Total (with Global HTTPS LB + HA)</td><td style="text-align:right;">~$65</td></tr>
+        <tr class="total"><td>Total (no LB, direct <code>run.app</code>)</td><td style="text-align:right;">~$47</td></tr>
+        <tr class="total"><td>Total (db-f1-micro, dev/single-tenant)</td><td style="text-align:right;">~$28</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Option 5 -->
+  <div class="option">
+    <h3><span class="num">5</span> Split Architecture — Frontend + API + Queue Worker</h3>
+    <p>Static frontend + dedicated API + background worker + queue. Cloud-agnostic.</p>
+
+    <div class="diagram avoid-break">
+      <svg viewBox="0 0 780 240" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="a5" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+          </marker>
+        </defs>
+        <rect x="10" y="90" width="70" height="38" rx="6" fill="#e5e7eb" stroke="#94a3b8"/>
+        <text x="45" y="113" font-size="11" font-weight="600" text-anchor="middle">Users</text>
+
+        <rect x="100" y="60" width="150" height="38" rx="6" fill="#e9d5ff" stroke="#7c3aed"/>
+        <text x="175" y="78" font-size="11" font-weight="600" text-anchor="middle" fill="#5b21b6">CDN + Static Next.js</text>
+        <text x="175" y="91" font-size="9" text-anchor="middle" fill="#5b21b6">CloudFront/Blob/GCS</text>
+
+        <rect x="100" y="120" width="150" height="38" rx="6" fill="#dbeafe" stroke="#2563eb"/>
+        <text x="175" y="138" font-size="11" font-weight="600" text-anchor="middle" fill="#1e40af">API container</text>
+        <text x="175" y="151" font-size="9" text-anchor="middle" fill="#1e40af">NestJS / Fastify</text>
+
+        <rect x="280" y="120" width="120" height="38" rx="6" fill="#f3f4f6" stroke="#6b7280"/>
+        <text x="340" y="138" font-size="10" font-weight="600" text-anchor="middle" fill="#111827">Queue</text>
+        <text x="340" y="151" font-size="9" text-anchor="middle" fill="#374151">SQS/ServiceBus/Tasks</text>
+
+        <rect x="430" y="120" width="130" height="38" rx="6" fill="#dbeafe" stroke="#2563eb"/>
+        <text x="495" y="138" font-size="11" font-weight="600" text-anchor="middle" fill="#1e40af">Worker container</text>
+        <text x="495" y="151" font-size="9" text-anchor="middle" fill="#1e40af">Heavy reports, QBO</text>
+
+        <rect x="580" y="120" width="150" height="38" rx="6" fill="#fed7aa" stroke="#ea580c"/>
+        <text x="655" y="138" font-size="11" font-weight="600" text-anchor="middle" fill="#9a3412">Postgres (any cloud)</text>
+        <text x="655" y="151" font-size="9" text-anchor="middle" fill="#9a3412">RDS/Flexible/Cloud SQL</text>
+
+        <rect x="280" y="180" width="120" height="30" rx="4" fill="#fef3c7" stroke="#b45309"/>
+        <text x="340" y="199" font-size="10" font-weight="600" text-anchor="middle" fill="#92400e">Redis (cache)</text>
+
+        <line x1="80" y1="109" x2="98" y2="79" stroke="#64748b" stroke-width="1.2" marker-end="url(#a5)"/>
+        <line x1="80" y1="109" x2="98" y2="139" stroke="#64748b" stroke-width="1.2" marker-end="url(#a5)"/>
+        <line x1="250" y1="139" x2="278" y2="139" stroke="#64748b" stroke-width="1.2" marker-end="url(#a5)"/>
+        <line x1="400" y1="139" x2="428" y2="139" stroke="#64748b" stroke-width="1.2" marker-end="url(#a5)"/>
+        <line x1="560" y1="139" x2="578" y2="139" stroke="#64748b" stroke-width="1.2" marker-end="url(#a5)"/>
+        <line x1="250" y1="139" x2="580" y2="139" stroke="#64748b" stroke-width="1" stroke-dasharray="2,2" marker-end="url(#a5)"/>
+        <line x1="340" y1="158" x2="340" y2="178" stroke="#64748b" stroke-width="1" stroke-dasharray="2,2"/>
+      </svg>
+    </div>
+
+    <div class="cols2">
+      <div class="strengths col">
+        <h4 style="margin-top:0;">Strengths</h4>
+        <ul>
+          <li>Independent scaling — a slow report in the worker never blocks users.</li>
+          <li>Cloud-portable — same images run on AWS, Azure, GCP.</li>
+          <li>Clean REST surface is easier to test than scattered Server Actions.</li>
+          <li>Long-running report jobs in worker, not HTTP handler.</li>
+        </ul>
+      </div>
+      <div class="weaknesses col">
+        <h4 style="margin-top:0;">Weaknesses</h4>
+        <ul>
+          <li><strong>Major rewrite — 8–12 weeks</strong>. Every Server Action becomes a REST endpoint.</li>
+          <li>Higher infra cost (~$145+/mo) — 3 containers + Redis + queue.</li>
+          <li>Two codebases minimum; auth wired twice.</li>
+          <li>Benefits only materialise at scale this app doesn't have.</li>
+          <li>Abandons the productive Server Actions + Prisma model.</li>
+        </ul>
+      </div>
+    </div>
+    <p><strong>Indicative total:</strong> ~$145+ / month on AWS.</p>
+  </div>
+</section>
+
+<!-- ============================= 4. COMPARISON ============================= -->
+<section class="pb">
+  <h2>4. Side-by-Side Comparison</h2>
+
+  <h3>Monthly cost at current usage</h3>
+  <div class="costchart avoid-break">
+    <div class="bar-row">
+      <div class="label">Current stack (baseline)</div>
+      <div class="track"><div class="fill" style="width: 41%;"></div></div>
+      <div class="cost">~$60</div>
+    </div>
+    <div class="bar-row">
+      <div class="label"><strong>Opt 1 — AWS Refined (single-AZ)</strong></div>
+      <div class="track"><div class="fill alt" style="width: 65%;"></div></div>
+      <div class="cost">~$95</div>
+    </div>
+    <div class="bar-row">
+      <div class="label">Opt 1 — AWS Refined (multi-AZ)</div>
+      <div class="track"><div class="fill" style="width: 90%;"></div></div>
+      <div class="cost">~$131</div>
+    </div>
+    <div class="bar-row">
+      <div class="label">Opt 2 — AWS Serverless</div>
+      <div class="track"><div class="fill" style="width: 48%;"></div></div>
+      <div class="cost">~$70</div>
+    </div>
+    <div class="bar-row">
+      <div class="label">Opt 3 — Azure Container Apps</div>
+      <div class="track"><div class="fill" style="width: 51%;"></div></div>
+      <div class="cost">~$74</div>
+    </div>
+    <div class="bar-row">
+      <div class="label"><strong>Opt 4 — GCP Cloud Run</strong></div>
+      <div class="track"><div class="fill alt" style="width: 45%;"></div></div>
+      <div class="cost">~$65</div>
+    </div>
+    <div class="bar-row">
+      <div class="label">Opt 4 — GCP (no LB, min DB)</div>
+      <div class="track"><div class="fill alt" style="width: 19%;"></div></div>
+      <div class="cost">~$28</div>
+    </div>
+    <div class="bar-row">
+      <div class="label">Opt 5 — Split architecture</div>
+      <div class="track"><div class="fill alt2" style="width: 100%;"></div></div>
+      <div class="cost">~$145</div>
+    </div>
+  </div>
+
+  <h3>Capability matrix</h3>
+  <p style="font-size:9pt; color: var(--muted);">Legend: <span class="m-good">✓✓</span> strong &nbsp; <span class="m-ok">✓</span> adequate &nbsp; <span class="m-warn">~</span> workable but painful &nbsp; <span class="m-bad">✗</span> poor fit</p>
+
+  <table class="matrix avoid-break">
+    <thead>
+      <tr>
+        <th>Dimension</th>
+        <th>Opt 1 AWS Refined</th>
+        <th>Opt 2 AWS Serverless</th>
+        <th>Opt 3 Azure CA</th>
+        <th>Opt 4 GCP Cloud Run</th>
+        <th>Opt 5 Split</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Migration distance from current code</td><td class="r m-good">✓✓</td><td class="r m-warn">~</td><td class="r m-warn">~</td><td class="r m-warn">~</td><td class="r m-bad">✗</td></tr>
+      <tr><td>Preserves Server Actions</td><td class="r m-good">✓✓</td><td class="r m-ok">✓</td><td class="r m-good">✓✓</td><td class="r m-good">✓✓</td><td class="r m-bad">✗</td></tr>
+      <tr><td>Preserves Prisma schema &amp; migrations</td><td class="r m-good">✓✓</td><td class="r m-ok">✓</td><td class="r m-good">✓✓</td><td class="r m-good">✓✓</td><td class="r m-good">✓✓</td></tr>
+      <tr><td>Handles heavy PDF / XLSX gen</td><td class="r m-good">✓✓</td><td class="r m-warn">~</td><td class="r m-good">✓✓</td><td class="r m-good">✓✓</td><td class="r m-good">✓✓</td></tr>
+      <tr><td>Cron support for 4 daily NZT jobs</td><td class="r m-ok">✓</td><td class="r m-good">✓✓</td><td class="r m-good">✓✓</td><td class="r m-good">✓✓</td><td class="r m-good">✓✓</td></tr>
+      <tr><td>Scale to zero</td><td class="r m-bad">✗</td><td class="r m-good">✓✓</td><td class="r m-good">✓✓</td><td class="r m-good">✓✓</td><td class="r m-warn">~</td></tr>
+      <tr><td>Cold-start impact on UX</td><td class="r m-good">✓✓ none</td><td class="r m-warn">~ 1-3s</td><td class="r m-warn">~ 1-3s</td><td class="r m-ok">✓ &lt;1s</td><td class="r m-warn">~</td></tr>
+      <tr><td>Managed HTTPS out of the box</td><td class="r m-ok">✓</td><td class="r m-ok">✓</td><td class="r m-good">✓✓</td><td class="r m-good">✓✓</td><td class="r m-ok">✓</td></tr>
+      <tr><td>Secrets management</td><td class="r m-good">✓✓</td><td class="r m-good">✓✓</td><td class="r m-good">✓✓</td><td class="r m-good">✓✓</td><td class="r m-good">✓✓</td></tr>
+      <tr><td>Private database networking</td><td class="r m-good">✓✓</td><td class="r m-good">✓✓</td><td class="r m-good">✓✓</td><td class="r m-good">✓✓</td><td class="r m-good">✓✓</td></tr>
+      <tr><td>Multi-AZ / HA DB</td><td class="r m-good">✓✓</td><td class="r m-good">✓✓</td><td class="r m-ok">✓</td><td class="r m-ok">✓</td><td class="r m-good">✓✓</td></tr>
+      <tr><td>Observability</td><td class="r m-ok">✓</td><td class="r m-warn">~</td><td class="r m-ok">✓</td><td class="r m-good">✓✓</td><td class="r m-good">✓✓</td></tr>
+      <tr><td>IaC reuse (SST/Pulumi already)</td><td class="r m-good">✓✓</td><td class="r m-ok">✓</td><td class="r m-warn">~</td><td class="r m-warn">~</td><td class="r m-warn">~</td></tr>
+      <tr><td>1-dev cognitive load</td><td class="r m-ok">✓</td><td class="r m-warn">~</td><td class="r m-warn">~</td><td class="r m-good">✓✓</td><td class="r m-bad">✗</td></tr>
+      <tr><td>Monthly cost at current usage</td><td>~$95–131</td><td>~$70</td><td>~$40–74</td><td>~$30–65</td><td>~$145+</td></tr>
+      <tr><td>NZ SME procurement familiarity</td><td class="r m-good">✓✓ AWS</td><td class="r m-good">✓✓ AWS</td><td class="r m-good">✓✓ MS</td><td class="r m-ok">✓</td><td class="r m-ok">✓</td></tr>
+      <tr><td>Future lock-in risk</td><td class="r m-warn">~</td><td class="r m-warn">~</td><td class="r m-warn">~</td><td class="r m-warn">~</td><td class="r m-good">✓✓</td></tr>
+      <tr><td>Time to first deploy from today</td><td>~5 days</td><td>~10 days</td><td>~7 days</td><td>~5 days</td><td>~8–12 weeks</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================= 5. RECOMMENDATION ============================= -->
+<section class="pb">
+  <h2>5. Final Recommendation — Top Two</h2>
+  <p>Given the app shape (CRUD-heavy, low traffic, bursty CPU on reports, 1-dev team, data-critical ledger, NZ locality), the two strongest options are:</p>
+
+  <div class="option top">
+    <h3><span class="num">A</span> AWS Refined <span class="tag">Gold — fastest path to production-safe</span></h3>
+    <p><strong>Best for:</strong> the fastest path to a safe, correct production system with minimal risk.</p>
+    <ul>
+      <li>Keeps 100% of the existing domain code intact.</li>
+      <li>Fixes every production gap (HTTPS, secrets, real crons, private DB, migrations, CI/CD, backups, alarms) in a single focused ~5-day effort.</li>
+      <li>The existing SST/Pulumi IaC stays; only deltas are added.</li>
+      <li>Ongoing cost is <strong>~$95/mo single-AZ</strong> or <strong>~$131/mo multi-AZ</strong>, predictable and flat.</li>
+      <li>No cold starts. Report pages stay snappy.</li>
+      <li>Team retention: developer continues using the AWS tools they already know.</li>
+    </ul>
+    <p class="callout"><strong>Pick over B if:</strong> you want to ship a hardened production system in a week, you don't want to learn a new cloud, you're prepared to pay for always-on compute.</p>
+  </div>
+
+  <div class="option top">
+    <h3><span class="num">B</span> GCP Cloud Run <span class="tag">Silver — lowest TCO</span></h3>
+    <p><strong>Best for:</strong> long-term lowest TCO with the simplest operator model.</p>
+    <ul>
+      <li>Scale-to-zero: idle overnight costs pennies.</li>
+      <li>Fastest cold starts of any scale-to-zero option (200–800 ms typical).</li>
+      <li>Managed HTTPS and custom-domain certs are one-liners.</li>
+      <li>Cloud Scheduler is the cleanest cron primitive of the five options.</li>
+      <li>The operator surface is smaller than AWS — fewer services, simpler IAM.</li>
+      <li>Ongoing cost at low usage: <strong>~$30–65/mo</strong> depending on whether the Global HTTPS LB is used.</li>
+    </ul>
+    <p class="callout"><strong>Pick over A if:</strong> you want the lowest possible monthly bill, you're comfortable learning GCP, you value operational simplicity over platform familiarity, procurement has no AWS mandate.</p>
+  </div>
+
+  <h3>Why not the others</h3>
+  <ul>
+    <li><strong>Option 2 (AWS Serverless):</strong> Tempting for scale-to-zero, but Aurora Serverless v2's $43/mo floor eliminates the cost advantage at this scale, and OpenNext adds a debugging layer the team doesn't need. If traffic grows 10× this becomes the best option.</li>
+    <li><strong>Option 3 (Azure Container Apps):</strong> Technically excellent, competitive on price. Recommend over GCP only if there's a Microsoft 365 / Entra ID procurement reason.</li>
+    <li><strong>Option 5 (Split):</strong> The right answer if this app were 10× bigger, multi-team, or multi-product. Wrong answer for a 1-dev team shipping an inventory ERP. Revisit in 18 months if the business warrants it.</li>
+  </ul>
+</section>
+
+<!-- ============================= 6. PROMPT A ============================= -->
+<section class="pb">
+  <h2>6. Rebuild Prompt — Option A (AWS Refined)</h2>
+  <p>Hand this brief to a development team — fresh or continuing — to rebuild the app on AWS with every gap closed.</p>
+
+  <blockquote>
+    <h3>Rebuild Brief: NZ Inventory ERP on AWS (Fargate + RDS + HTTPS + EventBridge)</h3>
+
+    <p><strong>Product:</strong> Multi-tenant B2B distributor ERP for a New Zealand health-products company. Users manage products, stock, batches, suppliers, customers, purchase orders, sales orders, proforma invoices, credit notes, reservations, 15 reports, and a QuickBooks Online sync. Current users are in the low tens; architecture must support 10×.</p>
+    <p><strong>Goal:</strong> Production system on AWS <code>ap-southeast-2</code>, HTTPS end-to-end, private database, managed secrets, real scheduled jobs, safe migrations, CI/CD, backups, and alarms. Preserve the existing codebase; change only what must change.</p>
+    <p><strong>Non-goals:</strong> Rewriting Server Actions, changing Prisma, introducing microservices, adding a queue, replacing the frontend.</p>
+    <p><strong>Source of truth:</strong> Existing Next.js 15 App Router + Prisma 5 + PostgreSQL repo. Retain every page, every server action, every Prisma model, every report, every API route, all iron-session auth logic, all fiscal-year / NZT behaviour, and the QuickBooks Online integration with AES-256-GCM-encrypted refresh tokens.</p>
+
+    <h4>Target Architecture</h4>
+    <ul>
+      <li><strong>Region:</strong> <code>ap-southeast-2</code>.</li>
+      <li><strong>Edge:</strong> Route 53 hosted zone → CloudFront distribution → ALB on HTTPS only (:443). ALB :80 redirects to :443. ACM cert auto-renewed. HSTS header set by the app.</li>
+      <li><strong>Compute:</strong> ECS Fargate, arm64, <code>0.5 vCPU / 1 GB</code>, desired 1, min 1, max 3. Health check <code>/api/health</code>. Task execution role reads from Secrets Manager. Task role has least-privilege S3 + Secrets Manager access only.</li>
+      <li><strong>Database:</strong> RDS PostgreSQL 16, <code>db.t4g.small</code> multi-AZ, 50 GB gp3, automated backups 7 days, PITR on, private subnets, <code>publicly-accessible=false</code>, deletion protection on, Performance Insights on.</li>
+      <li><strong>Networking:</strong> VPC with 2 public subnets (ALB, NAT) and 2 private subnets (Fargate, RDS) across 2 AZs. One NAT Gateway. SGs: ALB 80/443 public; Fargate 3000 from ALB SG only; RDS 5432 from Fargate SG only.</li>
+      <li><strong>Secrets:</strong> Secrets Manager — one secret per value: <code>session-secret</code>, <code>qbo-client-id</code>, <code>qbo-client-secret</code>, <code>qbo-encryption-key</code>, <code>database-url</code>, <code>resend-api-key</code>, <code>cron-secret</code>. Wired via task-def <code>secrets</code> block.</li>
+      <li><strong>Storage:</strong> S3 bucket <code>nz-inv-artifacts-&lt;account&gt;-&lt;region&gt;</code>. SSE-S3, public access blocked, versioned. Folders <code>reports/{tenantId}/{date}/</code>, <code>product-images/{tenantId}/</code>, <code>invoices/{tenantId}/</code>. CloudFront OAI for signed-URL delivery.</li>
+      <li><strong>Cron:</strong> 4× EventBridge Scheduler — each <code>cron(... Australia/Auckland)</code>:
+        <ul>
+          <li><code>qbo-sync</code> 08:00 NZT → ECS RunTask with <code>nz-inv-cron</code> task def, env <code>CRON_HANDLER=qbo-sync</code>.</li>
+          <li><code>low-stock</code> 19:00 NZT.</li>
+          <li><code>fx-rates</code> 18:00 NZT.</li>
+          <li><code>reports</code> 07:00 NZT.</li>
+        </ul>
+        Cron task def mirrors web task def but overrides entrypoint to <code>node scripts/cron-handler.js</code>.
+      </li>
+      <li><strong>Registry:</strong> ECR immutable tags <code>git-&lt;sha&gt;</code>. Lifecycle keeps last 20.</li>
+      <li><strong>CI/CD:</strong> GitHub Actions on <code>main</code> — build arm64 image, ECR push with commit SHA, <code>aws ecs update-service --force-new-deployment</code>, wait for steady state, smoke-test <code>/api/health</code>.</li>
+      <li><strong>Observability:</strong> CloudWatch Logs retention 30 d on Fargate + cron log groups. Alarms on ALB 5xx &gt;1%, Fargate CPU &gt;80%, Memory &gt;80%, RDS storage &lt;10% free, RDS CPU &gt;80%, cron failures. Minimal dashboard. Container Insights optional.</li>
+      <li><strong>Migrations:</strong> Drop <code>prisma db push --accept-data-loss</code>. Commit migrations to <code>prisma/migrations/</code>. CI runs <code>prisma migrate deploy</code> as one-shot ECS task before rolling the web service.</li>
+      <li><strong>IaC:</strong> Keep SST 4.7 + <code>@pulumi/aws</code> in TypeScript. One <code>sst.config.ts</code> expressing every resource above. <code>sst deploy --stage prod</code> idempotent.</li>
+    </ul>
+
+    <h4>Code changes required (minimum set)</h4>
+    <ol>
+      <li><code>lib/session.ts</code> — remove dev fallback path in prod; <code>SECURE_COOKIE</code> keyed on <code>APP_URL</code> starts with <code>https://</code>.</li>
+      <li><code>lib/storage.ts</code> (new) — S3 client; <code>putReport</code>, <code>getReportSignedUrl</code>, <code>putProductImage</code>. Replace all <code>lib/supabase/admin.ts</code> usage.</li>
+      <li><code>lib/secrets.ts</code> (new, optional) — at boot, read secrets from env (injected by ECS).</li>
+      <li><code>scripts/cron-handler.ts</code> (new) — <code>switch (process.env.CRON_HANDLER) { ... }</code> dispatching to the four existing route handlers.</li>
+      <li><code>app/api/cron/*</code> — keep for manual invocation; make handlers importable so cron-handler can call them directly.</li>
+      <li><code>vercel.json</code> — delete.</li>
+      <li><code>middleware.ts</code> — no change.</li>
+      <li>Dockerfile — drop <code>prisma db push</code> from startup CMD; startup is <code>node server.js</code>.</li>
+      <li><code>package.json</code> — add <code>"migrate:deploy": "prisma migrate deploy"</code>.</li>
+      <li><code>.github/workflows/deploy.yml</code> (new) — checkout, <code>docker buildx</code> arm64, ECR push, <code>prisma migrate deploy</code> one-shot ECS task, <code>aws ecs update-service</code>, smoke test.</li>
+    </ol>
+
+    <h4>Acceptance criteria</h4>
+    <ul>
+      <li><code>curl -I https://&lt;domain&gt;/</code> returns HTTP/2 307 redirect to <code>/login</code>.</li>
+      <li><code>curl -I http://&lt;domain&gt;/</code> returns 301 to <code>https://&lt;domain&gt;/</code>.</li>
+      <li>SSL Labs scores A or better.</li>
+      <li>Direct Postgres from public internet times out.</li>
+      <li>Task definition JSON shows no plain secret values; Secrets Manager returns them.</li>
+      <li>All 4 EventBridge schedules visible; manual fire writes ExchangeRate / sends alert / drains QboSyncJob / writes ReportDelivery.</li>
+      <li><code>prisma migrate status</code> clean; no <code>--accept-data-loss</code> anywhere.</li>
+      <li>Bad deploy rollback via <code>aws ecs update-service --task-definition &lt;previous&gt;</code> in &lt;2 min.</li>
+      <li>CloudWatch dashboard live; synthetic alarm fires to SNS.</li>
+    </ul>
+
+    <h4>Deliverables</h4>
+    <ul>
+      <li><code>sst.config.ts</code> with full resource graph.</li>
+      <li>Cleaned Dockerfile.</li>
+      <li><code>lib/storage.ts</code>, <code>scripts/cron-handler.ts</code>, <code>lib/secrets.ts</code>.</li>
+      <li>GitHub Actions workflow.</li>
+      <li>Data migration from current RDS to new RDS (pg_dump / pg_restore, documented runbook).</li>
+      <li>Runbooks: <code>docs/runbooks/deploy.md</code>, <code>rotate-secrets.md</code>, <code>backup-restore.md</code>, <code>incident-response.md</code>.</li>
+      <li>One-page architecture diagram &amp; cost sheet.</li>
+    </ul>
+
+    <h4>Constraints</h4>
+    <ul>
+      <li>Preserve all 15 reports and their exports — no regression in PDF/XLSX output.</li>
+      <li>Preserve iron-session cookie auth. Do not introduce Cognito.</li>
+      <li>Preserve multi-tenant isolation through app code; no RLS in this pass.</li>
+      <li>Preserve NZT fiscal-year logic (April–March) and all date formatting.</li>
+      <li>Preserve QBO OAuth flow and AES-256-GCM refresh-token encryption.</li>
+      <li>Don't touch Prisma models unless adding a migration-safe constraint.</li>
+      <li>No Vercel.</li>
+    </ul>
+
+    <h4>Estimated effort</h4>
+    <p>Experienced AWS engineer familiar with Next.js + SST: <strong>5–7 working days</strong>.</p>
+  </blockquote>
+</section>
+
+<!-- ============================= 7. PROMPT B ============================= -->
+<section class="pb">
+  <h2>7. Rebuild Prompt — Option B (GCP Cloud Run)</h2>
+  <p>Hand this brief to a development team to rebuild the app on GCP.</p>
+
+  <blockquote>
+    <h3>Rebuild Brief: NZ Inventory ERP on GCP (Cloud Run + Cloud SQL + Cloud Scheduler)</h3>
+
+    <p><strong>Product:</strong> Multi-tenant B2B distributor ERP for a New Zealand health-products company. Users manage products, stock, batches, suppliers, customers, purchase orders, sales orders, proforma invoices, credit notes, reservations, 15 reports, and a QuickBooks Online sync. Current users are in the low tens; architecture must support 10×.</p>
+    <p><strong>Goal:</strong> Production system on GCP <code>australia-southeast1</code> (Sydney), scale-to-zero Cloud Run + private Cloud SQL + Cloud Scheduler crons + Secret Manager + Cloud Storage. Lowest sensible TCO with managed HTTPS and a clean operator model.</p>
+    <p><strong>Non-goals:</strong> Rewriting Server Actions, changing Prisma, introducing microservices, adding a queue, replacing the frontend.</p>
+    <p><strong>Source of truth:</strong> Existing Next.js 15 App Router + Prisma 5 + PostgreSQL repo. Retain every page, every server action, every Prisma model, every report, every API route, all iron-session auth logic, all fiscal-year / NZT behaviour, and the QuickBooks Online integration with AES-256-GCM-encrypted refresh tokens.</p>
+
+    <h4>Target architecture</h4>
+    <ul>
+      <li><strong>Region:</strong> <code>australia-southeast1</code> (Sydney). All services colocated to minimise egress and latency to NZ (~30 ms).</li>
+      <li><strong>Project:</strong> one per environment — <code>nz-inv-dev</code>, <code>nz-inv-prod</code>.</li>
+      <li><strong>Edge:</strong> Custom domain → external HTTPS Load Balancer with Google-managed SSL cert → serverless NEG pointing to Cloud Run service. Cloud Armor policy with baseline OWASP rules.</li>
+      <li><strong>Compute:</strong> Cloud Run service <code>nz-inv-web</code>, 2nd gen, container image from Artifact Registry, 1 vCPU / 1 GB, concurrency 20, min-instances 0, max-instances 5, CPU always-allocated off, startup CPU boost on. Ingress "Internal and Cloud Load Balancing".</li>
+      <li><strong>Database:</strong> Cloud SQL for PostgreSQL 16, <code>db-g1-small</code> (1 vCPU, 1.7 GB), 20 GB SSD, HA on, automated backups 7 d, PITR on, private IP only, maintenance window outside business hours.</li>
+      <li><strong>Networking:</strong> Default VPC with a <code>/28</code> Serverless VPC Connector in the same region. Cloud Run attaches to the connector for egress. Cloud SQL on private IP. Optional Cloud NAT for outbound internet (Resend, Frankfurter, QBO).</li>
+      <li><strong>Secrets:</strong> Google Secret Manager — one per value. Wired into Cloud Run via <code>--set-secrets=NAME=SECRET_NAME:latest</code>.</li>
+      <li><strong>Storage:</strong> Cloud Storage bucket <code>nz-inv-artifacts-&lt;project&gt;</code>. Uniform bucket-level access, versioning on, location <code>australia-southeast1</code>. Signed V4 URLs for delivery.</li>
+      <li><strong>Cron:</strong> 4× Cloud Scheduler jobs, timezone <code>Pacific/Auckland</code>:
+        <ul>
+          <li><code>0 8 * * *</code> — POST <code>/api/cron/qbo-sync</code> with OIDC token; route verifies email matches <code>cron-invoker</code> service account.</li>
+          <li><code>0 19 * * *</code> → <code>/api/cron/low-stock</code>.</li>
+          <li><code>0 18 * * *</code> → <code>/api/cron/fx-rates</code>.</li>
+          <li><code>0 7 * * *</code> → <code>/api/cron/reports</code>.</li>
+        </ul>
+      </li>
+      <li><strong>Registry:</strong> Artifact Registry <code>nz-inv/web</code>, immutable tags <code>git-&lt;sha&gt;</code>.</li>
+      <li><strong>CI/CD:</strong> GitHub Actions on <code>main</code> — build, push to Artifact Registry, run Cloud Run Job <code>nz-inv-migrate</code> (<code>prisma migrate deploy</code>), <code>gcloud run deploy --no-traffic</code>, verify, shift 100% traffic.</li>
+      <li><strong>Observability:</strong> Cloud Logging 30 d retention. Dashboards for req count, p50/p95/p99 latency, error rate, DB CPU, connections, VPC connector throughput. Alerts on error &gt;1%, p95 &gt;2 s, DB storage &lt;10%, DB CPU &gt;80%, failed revisions, Scheduler failures. Uptime check on <code>/api/health</code>.</li>
+      <li><strong>Migrations:</strong> Drop <code>prisma db push --accept-data-loss</code>. Commit migrations. CI runs <code>prisma migrate deploy</code> via <code>gcloud run jobs execute</code> before deploying the new revision.</li>
+      <li><strong>IaC:</strong> Replace SST/Pulumi AWS with Terraform (preferred) or Pulumi <code>@pulumi/gcp</code>. Every resource expressed as code; <code>terraform apply</code> idempotent.</li>
+    </ul>
+
+    <h4>Code changes required (minimum set)</h4>
+    <ol>
+      <li><code>lib/session.ts</code> — <code>SECURE_COOKIE</code> keyed on <code>APP_URL</code> starts with <code>https://</code>; remove AWS-specific comments.</li>
+      <li><code>lib/storage.ts</code> (new) — GCS client via <code>@google-cloud/storage</code>; put/get helpers; replace all <code>lib/supabase/admin.ts</code>.</li>
+      <li><code>app/api/cron/*</code> — verify incoming OIDC token (Bearer), confirm email claim matches <code>cron-invoker</code> SA; fall back to <code>CRON_SECRET</code> header for dev.</li>
+      <li><code>vercel.json</code> — delete.</li>
+      <li><code>middleware.ts</code> — no change.</li>
+      <li>Dockerfile — drop <code>prisma db push</code> from CMD.</li>
+      <li><code>package.json</code> — add <code>"migrate:deploy": "prisma migrate deploy"</code>.</li>
+      <li><code>.github/workflows/deploy.yml</code> (new) — checkout, auth to GCP via workload identity federation, build, push to Artifact Registry, <code>gcloud run jobs execute nz-inv-migrate --wait</code>, <code>gcloud run deploy --no-traffic</code>, smoke test, shift traffic.</li>
+      <li><code>terraform/</code> (new) — VPC connector, Cloud SQL, Secret Manager, Cloud Storage, Artifact Registry, Cloud Run service &amp; Job, 4× Cloud Scheduler jobs, LB + managed cert, Cloud Armor, monitoring alerts, uptime check.</li>
+    </ol>
+
+    <h4>Acceptance criteria</h4>
+    <ul>
+      <li><code>curl -I https://&lt;domain&gt;/</code> returns 307 redirect to <code>/login</code> over TLS 1.2+.</li>
+      <li>Cloud SQL has no public IP; connection from outside the VPC fails.</li>
+      <li><code>gcloud secrets list</code> shows 7 secrets; service describe does not reveal values.</li>
+      <li>All 4 Cloud Scheduler jobs visible with NZT triggers; manual run writes expected side-effects.</li>
+      <li><code>prisma migrate status</code> clean; no <code>--accept-data-loss</code>.</li>
+      <li>Rollback via <code>gcloud run services update-traffic</code> in &lt;30 s.</li>
+      <li>Uptime check passes; alert fires on deliberate <code>/api/health</code> failure and auto-resolves.</li>
+      <li>Cold-start &lt;1 s static, &lt;2 s DB-backed after 30-min idle.</li>
+    </ul>
+
+    <h4>Deliverables</h4>
+    <ul>
+      <li>Terraform modules under <code>terraform/</code>.</li>
+      <li>Cleaned Dockerfile.</li>
+      <li><code>lib/storage.ts</code>, updated cron handlers with OIDC verification.</li>
+      <li>GitHub Actions workflow using workload identity federation (no long-lived keys).</li>
+      <li>Data migration AWS RDS → Cloud SQL (pg_dump over jump-box, documented runbook).</li>
+      <li>Runbooks: <code>docs/runbooks/*</code>.</li>
+      <li>Architecture diagram &amp; cost sheet.</li>
+    </ul>
+
+    <h4>Constraints</h4>
+    <ul>
+      <li>Preserve all 15 reports — no regression in PDF / XLSX.</li>
+      <li>Preserve iron-session cookie auth. No Identity Platform in this pass.</li>
+      <li>Preserve multi-tenant isolation through app code.</li>
+      <li>Preserve NZT fiscal-year logic.</li>
+      <li>Preserve QBO OAuth flow &amp; AES-256-GCM.</li>
+      <li>Don't touch Prisma models.</li>
+      <li>No Vercel.</li>
+    </ul>
+
+    <h4>Estimated effort</h4>
+    <p>Experienced engineer, comfortable picking up GCP: <strong>5–7 working days</strong>. Add 2 days for a team new to GCP.</p>
+  </blockquote>
+</section>
+
+<!-- ============================= 8. CAVEATS ============================= -->
+<section class="pb">
+  <h2>8. Appendix — Honest Caveats</h2>
+  <ul>
+    <li><strong>No hallucinated features.</strong> Every capability listed in Section 1 maps to real files in the repo.</li>
+    <li><strong>Pricing is indicative, not contractual.</strong> On-demand list prices for April 2026 in the stated regions. Enterprise discounts, savings plans, committed-use, and free tiers move these ±10–30%.</li>
+    <li><strong>Cold-start figures are industry medians</strong> for Next.js containers of this size — not benchmarked on this app.</li>
+    <li><strong>Aurora Serverless v2 floor is real</strong> — cannot pause below 0.5 ACU as of writing.</li>
+    <li><strong>GCP region caveat.</strong> <code>australia-southeast1</code> is Sydney. NZ latency via the Tasman ~30 ms. No NZ hyperscaler region exists today.</li>
+    <li><strong>Split option (5) is real and sometimes right</strong> — just not for this app at this stage. Revisit if the business bifurcates.</li>
+    <li><strong>Migration risk.</strong> Whichever target is chosen, data migration from current RDS is the single riskiest step. Plan a rehearsal on a restored snapshot, a cutover window, read-only during cutover, and a documented rollback.</li>
+  </ul>
+</section>
+
+<!-- ============================= 9. QUICK FIXES ============================= -->
+<section class="pb">
+  <h2>9. Appendix — Short-Term Fixes If Not Rebuilding Yet</h2>
+  <p>If the rebuild can't happen this sprint, these three changes close the highest-severity gaps in the current stack in ~1 week:</p>
+  <ol>
+    <li><strong>HTTPS on the ALB</strong> (~2 days): Route 53 zone + ACM cert + ALB :443 listener + :80 → :443 redirect. Update <code>APP_URL</code> in task def so the session cookie flips to <code>Secure</code>.</li>
+    <li><strong>Move secrets to Secrets Manager</strong> (~1 day): 7 secrets, update task def's <code>secrets</code> block, remove from plain env.</li>
+    <li><strong>Real crons via EventBridge Scheduler</strong> (~2 days): 4 rules, <code>nz-inv-cron</code> task def with <code>CRON_HANDLER</code> dispatch, <code>scripts/cron-handler.ts</code> entrypoint.</li>
+  </ol>
+  <div class="callout good">
+    <p style="margin:0;">Do these three <strong>even if you do eventually rebuild</strong> — they are table-stakes production hygiene.</p>
+  </div>
+  <p style="margin-top:20pt; text-align:center; color: var(--muted); font-size: 9pt;"><em>End of report.</em></p>
+</section>
+
+</body>
+</html>

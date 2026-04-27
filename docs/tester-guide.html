@@ -1,0 +1,1106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Inventory App — Tester Guide</title>
+  <style>
+    /* ---------- type & layout ---------- */
+    :root {
+      --bg: #f7f8fb;
+      --card: #ffffff;
+      --ink: #15212e;
+      --muted: #5b6b7a;
+      --line: #e3e8ee;
+      --brand: #1d4ed8;
+      --brand-soft: #e0e8ff;
+      --good: #137a3a;
+      --good-soft: #d8f3df;
+      --warn: #92400e;
+      --warn-soft: #fef3c7;
+      --bad: #b3261e;
+      --bad-soft: #fde2e0;
+      --code-bg: #0f172a;
+      --code-ink: #e2e8f0;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.55;
+      font-size: 16px;
+    }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 24px 20px 80px; }
+
+    h1, h2, h3, h4 { line-height: 1.2; }
+    h1 { font-size: 2.1rem; margin: 0 0 .25em; }
+    h2 { font-size: 1.5rem; margin: 2em 0 .4em; }
+    h3 { font-size: 1.15rem; margin: 1.4em 0 .3em; }
+    p { margin: .6em 0; }
+    a { color: var(--brand); }
+
+    .lede { font-size: 1.1rem; color: var(--muted); margin-top: .25em; }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: .8rem;
+      font-weight: 600;
+      letter-spacing: .02em;
+    }
+    .pill.brand { background: var(--brand-soft); color: var(--brand); }
+    .pill.good { background: var(--good-soft); color: var(--good); }
+    .pill.warn { background: var(--warn-soft); color: var(--warn); }
+    .pill.bad { background: var(--bad-soft); color: var(--bad); }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin: 16px 0;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, .03);
+    }
+    .card.tip { border-color: #b9d4ff; background: #f1f6ff; }
+    .card.warn { border-color: #f3d49a; background: #fff8e7; }
+    .card.danger { border-color: #f3b9b3; background: #fdecea; }
+
+    code, pre, .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .92em;
+    }
+    code { background: #eef1f6; padding: 1px 6px; border-radius: 4px; }
+    pre {
+      background: var(--code-bg);
+      color: var(--code-ink);
+      padding: 12px 14px;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+
+    ol, ul { padding-left: 1.4em; }
+    ol li, ul li { margin: .25em 0; }
+
+    /* ---------- mission boxes ---------- */
+    .mission {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--card);
+      padding: 22px 24px;
+      margin: 28px 0;
+    }
+    .mission .tag {
+      display: inline-block;
+      background: var(--brand);
+      color: white;
+      font-weight: 700;
+      font-size: .8rem;
+      padding: 3px 10px;
+      border-radius: 999px;
+      letter-spacing: .03em;
+    }
+    .mission h2 { margin-top: .35em; }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    /* ---------- mock screenshots ---------- */
+    .mock {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      font-size: 13px;
+      background: white;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, .06);
+      margin: 12px 0 20px;
+    }
+    .mock .titlebar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #ecf0f5;
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--line);
+    }
+    .mock .titlebar .dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #d3d7de;
+      display: inline-block;
+    }
+    .mock .titlebar .url {
+      flex: 1;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      padding: 2px 8px;
+      color: var(--muted);
+      font-family: ui-monospace, monospace;
+      font-size: 11px;
+      margin-left: 10px;
+    }
+    .mock .body {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      min-height: 300px;
+    }
+    .mock.no-sidebar .body { grid-template-columns: 1fr; }
+    .mock .side {
+      background: #fbfcfe;
+      border-right: 1px solid var(--line);
+      padding: 8px 0;
+    }
+    .mock .side .brand {
+      padding: 8px 14px 12px;
+      font-weight: 700;
+      color: var(--brand);
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 6px;
+    }
+    .mock .side .item {
+      padding: 6px 14px;
+      color: var(--muted);
+      cursor: default;
+    }
+    .mock .side .item.active {
+      color: var(--brand);
+      background: var(--brand-soft);
+      font-weight: 600;
+    }
+    .mock .main { padding: 16px 20px; }
+    .mock .main h4 { margin: 0 0 12px; font-size: 18px; }
+
+    .btn {
+      display: inline-block;
+      background: var(--brand);
+      color: white;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: default;
+    }
+    .btn.ghost { background: white; color: var(--ink); border: 1px solid var(--line); }
+    .btn.danger { background: var(--bad); }
+    .btn.green { background: var(--good); }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 10px;
+    }
+    .field label { font-size: 11px; color: var(--muted); }
+    .field input, .field select {
+      border: 1px solid var(--line);
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      background: white;
+    }
+
+    table.fake {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    table.fake th {
+      text-align: left;
+      font-weight: 600;
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+    }
+    table.fake td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #f0f3f7;
+    }
+
+    .tag-status {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .tag-status.draft { background: #e2e8f0; color: #475569; }
+    .tag-status.ordered { background: #dbeafe; color: #1e3a8a; }
+    .tag-status.received { background: var(--good-soft); color: var(--good); }
+    .tag-status.confirmed { background: #dbeafe; color: #1e3a8a; }
+    .tag-status.picked { background: #fef3c7; color: #92400e; }
+    .tag-status.shipped { background: var(--good-soft); color: var(--good); }
+    .tag-status.cancelled { background: var(--bad-soft); color: var(--bad); }
+
+    /* ---------- table of contents ---------- */
+    .toc {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 20px;
+      margin-bottom: 20px;
+    }
+    .toc ol { margin: 0; padding-left: 1.4em; }
+    .toc a { text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+
+    .checklist {
+      list-style: none;
+      padding-left: 0;
+    }
+    .checklist li {
+      padding: 4px 0 4px 28px;
+      position: relative;
+    }
+    .checklist li::before {
+      content: "";
+      width: 16px; height: 16px;
+      border: 2px solid #b6c0cc;
+      border-radius: 4px;
+      position: absolute;
+      left: 0; top: 7px;
+    }
+
+    .kbd {
+      display: inline-block;
+      padding: 1px 6px;
+      border: 1px solid var(--line);
+      border-bottom-width: 2px;
+      border-radius: 4px;
+      background: white;
+      font-family: ui-monospace, monospace;
+      font-size: .85em;
+      color: var(--ink);
+    }
+
+    .arrow-flow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin: 10px 0;
+    }
+    .arrow-flow .step {
+      background: white;
+      border: 1px solid var(--line);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .arrow-flow .arrow { color: var(--muted); font-weight: 700; }
+
+    .role-card {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .role-card h3 { margin: 0 0 .35em; }
+    .role-card .can { color: var(--good); font-weight: 600; }
+    .role-card .cant { color: var(--bad); font-weight: 600; }
+
+    hr.soft {
+      border: none;
+      border-top: 1px dashed var(--line);
+      margin: 20px 0;
+    }
+
+    .small { font-size: .9em; color: var(--muted); }
+
+    @media print {
+      body { background: white; }
+      .card, .mission { box-shadow: none; page-break-inside: avoid; }
+      .toc { page-break-after: always; }
+      .mission { page-break-after: auto; break-inside: avoid; }
+      h2 { page-break-after: avoid; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <span class="pill brand">For our junior tester</span>
+  <h1>Inventory App — Tester Guide</h1>
+  <p class="lede">A friendly walkthrough so you can break things on purpose, on purpose.</p>
+</header>
+
+<!-- INTRO -->
+<div class="card">
+  <h2 style="margin-top:0">Hey — thanks for helping</h2>
+  <p>
+    Your job is to use this app like a real customer would, and tell me when something
+    feels weird, looks broken, or just doesn't work. You don't need to understand the
+    code — you just need to follow the missions in this guide and write down what you see.
+  </p>
+  <p>
+    Take your time. There are no points for finishing fast. The whole point is to find
+    the dumb bugs before a real user does.
+  </p>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+  <strong>Table of contents</strong>
+  <ol>
+    <li><a href="#what">What is this app, anyway?</a></li>
+    <li><a href="#big-picture">The big picture (one diagram)</a></li>
+    <li><a href="#why">Why does this matter?</a></li>
+    <li><a href="#users">The three types of users</a></li>
+    <li><a href="#before">Before you start</a></li>
+    <li><a href="#m1">Mission 1 — Log in as each user</a></li>
+    <li><a href="#m2">Mission 2 — Look around (smoke test)</a></li>
+    <li><a href="#m3">Mission 3 — Buy stuff (Purchase Order)</a></li>
+    <li><a href="#m4">Mission 4 — Stuff arrives (Receive)</a></li>
+    <li><a href="#m5">Mission 5 — Sell stuff (Sales Order)</a></li>
+    <li><a href="#m6">Mission 6 — Pick &amp; Ship</a></li>
+    <li><a href="#m7">Mission 7 — Send it to QuickBooks</a></li>
+    <li><a href="#m8">Mission 8 — Bonus rounds</a></li>
+    <li><a href="#bugs">When something breaks: the bug log</a></li>
+  </ol>
+</div>
+
+<!-- ============== WHAT ============== -->
+<h2 id="what">1. What is this app, anyway?</h2>
+
+<p>
+  Imagine the family business as a warehouse with thousands of products on shelves.
+  Stuff comes in from suppliers (overseas factories, NZ vendors), sits on the shelves
+  for a while, and then gets shipped out to customers who bought it.
+</p>
+
+<p>
+  Without an app, you'd track all of that on paper. You'd lose track. You'd sell
+  things you don't have. You'd buy things you already have. You'd forget what
+  the freight cost. You'd send the wrong tax info to the bookkeeper.
+</p>
+
+<p>
+  This app is the <strong>brain</strong> of that warehouse. It remembers:
+</p>
+<ul>
+  <li>Every product, its price, and how many are on the shelf right now.</li>
+  <li>Every order we've placed with a supplier, and what's still on the way.</li>
+  <li>Every order a customer has placed with us, and where it is in our process.</li>
+  <li>What we paid for things — including freight, customs duty, weird charges — so we know if we're actually making money.</li>
+  <li>How to talk to QuickBooks (the accounting software) so the bookkeeper doesn't have to type everything in twice.</li>
+</ul>
+
+<p>
+  Think of it like the inventory screen in a video game — except instead of swords
+  and potions, it's real stuff in real boxes. And if the inventory says "5 left" but
+  there are actually 0, real money gets lost.
+</p>
+
+<!-- ============== BIG PICTURE ============== -->
+<h2 id="big-picture">2. The big picture</h2>
+
+<div class="card">
+  <p style="margin-top:0"><strong>The whole life of a product, in seven steps:</strong></p>
+  <div class="arrow-flow">
+    <span class="step">1. Buy from supplier</span>
+    <span class="arrow">→</span>
+    <span class="step">2. Receive into warehouse</span>
+    <span class="arrow">→</span>
+    <span class="step">3. Sits on shelf</span>
+    <span class="arrow">→</span>
+    <span class="step">4. Customer orders</span>
+    <span class="arrow">→</span>
+    <span class="step">5. Pick from shelf</span>
+    <span class="arrow">→</span>
+    <span class="step">6. Ship to customer</span>
+    <span class="arrow">→</span>
+    <span class="step">7. Tell QuickBooks</span>
+  </div>
+  <p class="small" style="margin-bottom:0">
+    Steps 1–2 are <strong>Purchase Orders</strong> (PO). Steps 4–6 are <strong>Sales
+    Orders</strong> (SO). Step 7 is the <strong>QuickBooks sync</strong>.
+  </p>
+</div>
+
+<!-- ============== WHY ============== -->
+<h2 id="why">3. Why does this matter?</h2>
+
+<p>
+  The business runs on this system. If the app says we have 200 of something but the
+  shelf is empty, someone gets a refund. If the GST is wrong, the bookkeeper has to
+  fix every line by hand. If a customer's tracking number doesn't get saved, they
+  call us asking where their parcel is and we have nothing to tell them.
+</p>
+
+<p>
+  The bugs you find now save real time and real money later. So please be picky.
+  If something feels off — even just a typo or a button in a weird place — write it
+  down at the bottom of this guide.
+</p>
+
+<!-- ============== USERS ============== -->
+<h2 id="users">4. The three types of users</h2>
+
+<p>
+  When you log in, the app gives you different abilities depending on which "role"
+  the account has. There are three:
+</p>
+
+<div class="grid-2">
+  <div class="role-card">
+    <span class="pill brand">ADMIN</span>
+    <h3>Admin / Owner</h3>
+    <p class="small">The boss. Can do everything.</p>
+    <p><span class="can">Can:</span> change settings, add/remove users, connect QuickBooks, see audit logs, change tax rules, do everything Sales and Warehouse can.</p>
+    <p><span class="cant">Can't:</span> nothing — admins see and do all of it.</p>
+  </div>
+
+  <div class="role-card">
+    <span class="pill good">SALES</span>
+    <h3>Sales rep</h3>
+    <p class="small">The person taking customer orders.</p>
+    <p><span class="can">Can:</span> create sales orders, create proforma invoices, reserve stock for a customer, view products and stock levels, add customers, add credit notes.</p>
+    <p><span class="cant">Can't:</span> change settings, add new users, manage the QuickBooks connection, view the audit log.</p>
+  </div>
+
+  <div class="role-card" style="grid-column: span 2;">
+    <span class="pill warn">WAREHOUSE</span>
+    <h3>Warehouse staff</h3>
+    <p class="small">The person on the floor with the boxes.</p>
+    <p><span class="can">Can:</span> receive purchase orders, mark sales orders as picked, ship orders with a tracking number, look up stock, view PO and SO details.</p>
+    <p><span class="cant">Can't:</span> change settings, see reports with money in them, manage users or the QuickBooks connection.</p>
+  </div>
+</div>
+
+<div class="card tip">
+  <strong>Heads up:</strong> right now the app may not block every page perfectly per role —
+  that's actually one of the things you're testing. If you're logged in as a SALES user
+  and you can still see Settings, write that down. If a button works that shouldn't, write
+  that down too.
+</div>
+
+<!-- ============== BEFORE YOU START ============== -->
+<h2 id="before">5. Before you start</h2>
+
+<h3>The website address</h3>
+<p>Open this URL in your browser:</p>
+<pre>http://WebLoadBalancer-tbaambtx-482012902.ap-southeast-2.elb.amazonaws.com</pre>
+<p>
+  It looks like a really long ugly link. That's fine — it's an internal tool, not a public
+  website. You'll be redirected to <code>/login</code> automatically.
+</p>
+
+<h3>Your three accounts</h3>
+<p>
+  Dad will give you three sets of credentials — one for each role. Write them at the top
+  of your bug log so you don't lose them. <strong>Do not</strong> share these passwords
+  with anyone, and don't paste them into anything other than the login screen.
+</p>
+
+<h3>Tools to have open</h3>
+<ul>
+  <li><strong>This guide</strong> — keep it open in another tab.</li>
+  <li><strong>A notebook</strong> (paper or text file) — for the bug log.</li>
+  <li><strong>Your phone or laptop screenshot tool</strong> — when something looks wrong, snap a picture. <span class="kbd">Cmd+Shift+4</span> on Mac, <span class="kbd">Win+Shift+S</span> on Windows.</li>
+  <li>Optional: open the browser's developer tools (<span class="kbd">F12</span> or <span class="kbd">Cmd+Opt+I</span>) and look at the <strong>Console</strong> tab. Red text in there is always useful.</li>
+</ul>
+
+<div class="card warn">
+  <strong>Rules of the game:</strong>
+  <ol>
+    <li>This is a <em>test</em> site, but it's connected to real QuickBooks. So the QuickBooks numbers will actually appear in the bookkeeping. <strong>Only push to QuickBooks when the guide tells you to</strong>, and only one or two test orders at most.</li>
+    <li>Don't change any settings that you weren't asked to change — especially the QuickBooks connection or the user list. If you do, you might lock everyone out.</li>
+    <li>If something looks <em>really</em> wrong (the whole page is white, or there's a giant red error), stop and tell Dad before continuing.</li>
+  </ol>
+</div>
+
+<!-- ============== MISSION 1 — LOGIN ============== -->
+<div class="mission" id="m1">
+  <span class="tag">MISSION 1</span>
+  <h2>Log in as each user</h2>
+
+  <p><strong>Goal:</strong> confirm all three accounts work and each one shows what it should.</p>
+
+  <h3>What you'll see</h3>
+  <div class="mock">
+    <div class="titlebar">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <div class="url">/login</div>
+    </div>
+    <div class="body" style="grid-template-columns: 1fr;">
+      <div class="main" style="display:flex; align-items:center; justify-content:center; min-height:280px;">
+        <div style="width:280px; border:1px solid var(--line); padding:18px; border-radius:10px;">
+          <div style="font-weight:700; margin-bottom:14px;">Sign in</div>
+          <div class="field"><label>Email</label><input value="you@example.com"></div>
+          <div class="field"><label>Password</label><input type="password" value="········"></div>
+          <span class="btn" style="display:block; text-align:center; margin-top:10px;">Sign in</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Steps</h3>
+  <ol>
+    <li>Open the URL. The app should bounce you to <code>/login</code>.</li>
+    <li>Type the <strong>ADMIN</strong> email + password. Click <strong>Sign in</strong>.</li>
+    <li>You should land on the dashboard with a sidebar on the left containing items like <em>Dashboard, Products, Inventory, Purchase Orders, Sales Orders, …, Settings</em>.</li>
+    <li>In the top-right, click the little log-out icon (looks like a door with an arrow).</li>
+    <li>Repeat with the <strong>SALES</strong> account, then the <strong>WAREHOUSE</strong> account.</li>
+  </ol>
+
+  <h3>What to check off</h3>
+  <ul class="checklist">
+    <li>All 3 accounts log in successfully.</li>
+    <li>Wrong password gets rejected with a clear error (try once, on purpose).</li>
+    <li>After logging out, going back to the URL bounces you to <code>/login</code> again (try the back button — it shouldn't show you the dashboard).</li>
+    <li>Each account's sidebar feels appropriate — admin sees Settings, others maybe shouldn't.</li>
+  </ul>
+
+  <h3>Bug ideas to watch for</h3>
+  <ul>
+    <li>"Stays logged in" forever even after clicking log-out.</li>
+    <li>Login is super slow (more than 5 seconds).</li>
+    <li>The wrong-password error is unclear or shows a code instead of a message.</li>
+    <li>Logging in on phone breaks the layout.</li>
+  </ul>
+</div>
+
+<!-- ============== MISSION 2 — SMOKE TEST ============== -->
+<div class="mission" id="m2">
+  <span class="tag">MISSION 2</span>
+  <h2>Look around (the smoke test)</h2>
+
+  <p><strong>Goal:</strong> click every page in the sidebar at least once, on each role. We're just checking nothing crashes.</p>
+
+  <h3>What you'll see</h3>
+  <div class="mock">
+    <div class="titlebar">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <div class="url">/</div>
+    </div>
+    <div class="body">
+      <div class="side">
+        <div class="brand">NZ Inventory</div>
+        <div class="item active">Dashboard</div>
+        <div class="item">Products</div>
+        <div class="item">Inventory</div>
+        <div class="item">Purchase Orders</div>
+        <div class="item">Sales Orders</div>
+        <div class="item">Proforma Invoices</div>
+        <div class="item">Reservations</div>
+        <div class="item">Suppliers</div>
+        <div class="item">Customers</div>
+        <div class="item">Reports</div>
+        <div class="item">Settings</div>
+      </div>
+      <div class="main">
+        <h4>Dashboard</h4>
+        <div class="grid-2" style="gap:8px;">
+          <div style="border:1px solid var(--line); padding:10px; border-radius:8px;">
+            <div class="small">Stock value (NZD)</div>
+            <div style="font-weight:700; font-size:18px;">$XX,XXX.00</div>
+          </div>
+          <div style="border:1px solid var(--line); padding:10px; border-radius:8px;">
+            <div class="small">Open sales orders</div>
+            <div style="font-weight:700; font-size:18px;">3</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Steps</h3>
+  <ol>
+    <li>While logged in as ADMIN, click each item in the left sidebar, top to bottom.</li>
+    <li>For each page, just check it loads. Don't click any buttons yet — that's later missions.</li>
+    <li>Inside <strong>Settings</strong>, click each sub-page (Users, Tax, QuickBooks, etc.).</li>
+    <li>Now log out and log in as SALES. Repeat — but expect that some pages may be missing or blocked.</li>
+    <li>Log out, log in as WAREHOUSE. Same thing.</li>
+  </ol>
+
+  <h3>What to check off</h3>
+  <ul class="checklist">
+    <li>No page shows a giant error or a blank white screen.</li>
+    <li>Numbers on the Dashboard are not <code>NaN</code> or <code>null</code>.</li>
+    <li>Tables either have rows or say something like "Nothing here yet" — they don't just show an empty space.</li>
+    <li>The active sidebar item gets highlighted when you click it.</li>
+    <li>Every page loads in under a couple of seconds.</li>
+  </ul>
+</div>
+
+<!-- ============== MISSION 3 — PURCHASE ORDER ============== -->
+<div class="mission" id="m3">
+  <span class="tag">MISSION 3</span>
+  <h2>Buy stuff (Purchase Order)</h2>
+
+  <p><strong>Goal:</strong> tell the system "we're buying 10 widgets from a supplier in Australia for AUD $4 each" and watch it work all the way through.</p>
+
+  <h3>The PO lifecycle</h3>
+  <div class="arrow-flow">
+    <span class="step"><span class="tag-status draft">Draft</span></span>
+    <span class="arrow">→</span>
+    <span class="step"><span class="tag-status ordered">Ordered</span></span>
+    <span class="arrow">→</span>
+    <span class="step"><span class="tag-status received">Received</span></span>
+  </div>
+  <p class="small">A PO can also be cancelled while it's still Draft.</p>
+
+  <h3>What you'll see (creating a PO)</h3>
+  <div class="mock">
+    <div class="titlebar">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <div class="url">/purchase-orders/new</div>
+    </div>
+    <div class="body">
+      <div class="side">
+        <div class="brand">NZ Inventory</div>
+        <div class="item">Dashboard</div>
+        <div class="item">Products</div>
+        <div class="item">Inventory</div>
+        <div class="item active">Purchase Orders</div>
+        <div class="item">Sales Orders</div>
+        <div class="item">Suppliers</div>
+        <div class="item">Customers</div>
+        <div class="item">Settings</div>
+      </div>
+      <div class="main">
+        <h4>New purchase order</h4>
+        <div class="grid-2">
+          <div class="field"><label>Supplier</label><select><option>Acme Imports (AUD)</option></select></div>
+          <div class="field"><label>Currency</label><input value="AUD"></div>
+          <div class="field"><label>FX rate (NZD per AUD)</label><input value="0.92"></div>
+          <div class="field"><label>Freight (AUD)</label><input value="50.00"></div>
+        </div>
+        <table class="fake">
+          <thead><tr><th>SKU</th><th>Product</th><th>Qty</th><th>Unit cost</th></tr></thead>
+          <tbody>
+            <tr><td>WID-01</td><td>Widget</td><td>10</td><td>4.00</td></tr>
+            <tr><td>WID-02</td><td>Bigger widget</td><td>5</td><td>9.50</td></tr>
+          </tbody>
+        </table>
+        <div style="margin-top:12px;">
+          <span class="btn">Save as draft</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Steps</h3>
+  <ol>
+    <li>Log in as <strong>ADMIN</strong> (or SALES — both can create POs).</li>
+    <li>Click <strong>Purchase Orders</strong> → <strong>New PO</strong>.</li>
+    <li>Pick any supplier from the dropdown. Pay attention — the currency should change to match the supplier's currency.</li>
+    <li>The FX rate should auto-fill from today's rate. Don't change it.</li>
+    <li>Add at least 2 product lines. Pick any product, set Qty = 10 (or anything reasonable), set a unit cost.</li>
+    <li>Type a freight amount (try 50.00).</li>
+    <li>Click <strong>Save as draft</strong>. You should now see the PO detail page with status <span class="tag-status draft">Draft</span>.</li>
+    <li>Click <strong>Mark Ordered</strong>. The status should flip to <span class="tag-status ordered">Ordered</span>.</li>
+  </ol>
+
+  <h3>What to check off</h3>
+  <ul class="checklist">
+    <li>Supplier dropdown actually shows suppliers.</li>
+    <li>Currency auto-fills based on supplier.</li>
+    <li>FX rate is a sensible number (not 0, not blank).</li>
+    <li>Adding a line and removing a line both work.</li>
+    <li>Total cost shown adds up correctly (qty × unit cost, plus freight).</li>
+    <li>The draft saves without errors.</li>
+    <li>"Mark Ordered" works and doesn't let you go back to Draft.</li>
+    <li>You can <em>not</em> click "Receive into stock" until the status is Ordered.</li>
+  </ul>
+
+  <h3>Things to try (edge cases)</h3>
+  <ul>
+    <li>Try saving a PO with no lines. It should refuse, with a clear message.</li>
+    <li>Try a giant qty like 99999 — does it still calculate the total right?</li>
+    <li>Try a unit cost of 0 — should that be allowed? Note what the app does and write it down.</li>
+  </ul>
+</div>
+
+<!-- ============== MISSION 4 — RECEIVE ============== -->
+<div class="mission" id="m4">
+  <span class="tag">MISSION 4</span>
+  <h2>Stuff arrives (Receive)</h2>
+
+  <p><strong>Goal:</strong> the boxes have shown up. Tell the system how many you actually got, and add any extra costs (customs, handling, shipping invoice that arrived separately).</p>
+
+  <h3>What you'll see</h3>
+  <div class="mock">
+    <div class="titlebar">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <div class="url">/purchase-orders/abc123</div>
+    </div>
+    <div class="body no-sidebar">
+      <div class="main">
+        <h4>PO-2026-014 &nbsp; <span class="tag-status ordered">Ordered</span></h4>
+        <p class="small" style="margin-top:-6px;">Acme Imports — AUD @ 0.92 — Total NZD $200.00</p>
+
+        <div style="border:1px solid var(--line); border-radius:8px; padding:12px; margin-top:14px;">
+          <strong>Receive Stock — Partial or Full</strong>
+          <p class="small">Enter quantities received, freight, and any additional charges from supplier invoices.</p>
+          <table class="fake">
+            <thead><tr><th>SKU</th><th>Product</th><th>Outstanding</th><th>Receiving now</th><th>Batch</th><th>Expiry</th></tr></thead>
+            <tbody>
+              <tr><td>WID-01</td><td>Widget</td><td>10</td><td><input style="width:50px" value="10"></td><td><input style="width:80px" value="LOT-2604"></td><td><input style="width:120px" type="date"></td></tr>
+            </tbody>
+          </table>
+          <div style="margin-top:10px;">
+            <strong style="font-size:13px;">Freight &amp; Additional Charges</strong>
+            <div class="grid-2" style="margin-top:6px;">
+              <div class="field"><label>Freight (AUD)</label><input value="50.00"></div>
+              <div></div>
+            </div>
+            <table class="fake" style="margin-top:6px;">
+              <thead><tr><th>Description</th><th>Amount</th><th>Ccy</th><th>Tax</th><th>Invoice ref</th></tr></thead>
+              <tbody>
+                <tr><td>Customs duty</td><td>32.50</td><td>NZD</td><td>15%</td><td>NZC-9912</td></tr>
+              </tbody>
+            </table>
+            <div style="margin-top:10px;"><span class="btn">Receive Stock</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Steps</h3>
+  <ol>
+    <li>Log in as <strong>WAREHOUSE</strong> (or ADMIN).</li>
+    <li>Open the PO you created in Mission 3.</li>
+    <li>In the <strong>Receive Stock</strong> card:
+      <ul>
+        <li>Leave the "Receiving Now" qty as the full outstanding amount.</li>
+        <li>Type a batch code like <code>LOT-2604</code>.</li>
+        <li>Pick an expiry date a year from now.</li>
+      </ul>
+    </li>
+    <li>Confirm the <strong>Freight</strong> box shows the value from the original PO. Leave it.</li>
+    <li>Click <strong>+ Add charge line</strong>. Add:
+      <ul>
+        <li>Description: <code>Customs duty</code></li>
+        <li>Amount: <code>32.50</code></li>
+        <li>Currency: <code>NZD</code></li>
+        <li>Tax: <code>15% — NZ GST</code></li>
+        <li>Invoice ref: <code>NZC-9912</code></li>
+      </ul>
+    </li>
+    <li>Click <strong>Receive Stock</strong>.</li>
+    <li>Now go to <strong>Inventory</strong> — the products you just received should have higher stock counts than before.</li>
+    <li>Go back to the PO. Status should be <span class="tag-status received">Received</span>.</li>
+  </ol>
+
+  <h3>What to check off</h3>
+  <ul class="checklist">
+    <li>Stock count goes up by the exact amount you received.</li>
+    <li>The PO total cost recalculates to include freight and the customs duty charge.</li>
+    <li>The batch code and expiry date appear somewhere on the PO afterward.</li>
+    <li>You can't receive more than was ordered (try typing 999 — it should clamp to outstanding).</li>
+  </ul>
+
+  <h3>Try a partial receive (extra credit)</h3>
+  <p>
+    Make a second PO with 20 units of one product. Only receive 8. Check that:
+  </p>
+  <ul>
+    <li>Stock goes up by 8 (not 20).</li>
+    <li>The PO is still Ordered (not Received), because there are 12 still outstanding.</li>
+    <li>You can come back later and receive the other 12.</li>
+  </ul>
+</div>
+
+<!-- ============== MISSION 5 — SALES ORDER ============== -->
+<div class="mission" id="m5">
+  <span class="tag">MISSION 5</span>
+  <h2>Sell stuff (Sales Order)</h2>
+
+  <p><strong>Goal:</strong> create a sales order from start to finish.</p>
+
+  <h3>The SO lifecycle</h3>
+  <div class="arrow-flow">
+    <span class="step"><span class="tag-status draft">Draft</span></span>
+    <span class="arrow">→</span>
+    <span class="step"><span class="tag-status confirmed">Confirmed</span></span>
+    <span class="arrow">→</span>
+    <span class="step"><span class="tag-status picked">Picked</span></span>
+    <span class="arrow">→</span>
+    <span class="step"><span class="tag-status shipped">Shipped</span></span>
+  </div>
+
+  <h3>What you'll see</h3>
+  <div class="mock">
+    <div class="titlebar">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <div class="url">/sales-orders/new</div>
+    </div>
+    <div class="body no-sidebar">
+      <div class="main">
+        <h4>New sales order</h4>
+        <div class="grid-2">
+          <div class="field"><label>Customer</label><select><option>Bob's Bargain Shop</option></select></div>
+          <div class="field"><label>Notes</label><input value="Deliver weekday only"></div>
+        </div>
+        <table class="fake">
+          <thead><tr><th>SKU</th><th>Product</th><th>Qty</th><th>Unit price (NZD)</th><th>Stock</th></tr></thead>
+          <tbody>
+            <tr><td>WID-01</td><td>Widget</td><td>3</td><td>9.99</td><td><span class="tag-status received">12</span></td></tr>
+          </tbody>
+        </table>
+        <div style="margin-top:12px;"><span class="btn">Save as draft</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Steps</h3>
+  <ol>
+    <li>Log in as <strong>SALES</strong>.</li>
+    <li>Click <strong>Sales Orders</strong> → <strong>New SO</strong>.</li>
+    <li>Pick a customer.</li>
+    <li>Add 2–3 product lines. Pick products that have stock. Set realistic prices.</li>
+    <li>Click <strong>Save as draft</strong>.</li>
+    <li>On the SO detail page, click <strong>Confirm</strong>. Status flips to <span class="tag-status confirmed">Confirmed</span>.</li>
+  </ol>
+
+  <h3>What to check off</h3>
+  <ul class="checklist">
+    <li>Customer dropdown actually has customers.</li>
+    <li>Product dropdown shows current stock next to each one.</li>
+    <li>Total at the bottom adds up correctly.</li>
+    <li>You can't confirm an order with 0 lines.</li>
+    <li>The price auto-fills from the customer's price group, if they have one.</li>
+  </ul>
+
+  <h3>Edge cases</h3>
+  <ul>
+    <li>Try ordering more than there is in stock. The system might allow it (back-order) or warn you — note which.</li>
+    <li>Try a qty of 0 on a line. It should refuse to save.</li>
+  </ul>
+</div>
+
+<!-- ============== MISSION 6 — PICK & SHIP ============== -->
+<div class="mission" id="m6">
+  <span class="tag">MISSION 6</span>
+  <h2>Pick &amp; Ship</h2>
+
+  <p><strong>Goal:</strong> walk the SO from "Confirmed" through to "Shipped".</p>
+
+  <h3>What you'll see</h3>
+  <div class="mock">
+    <div class="titlebar">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <div class="url">/sales-orders/abc123</div>
+    </div>
+    <div class="body no-sidebar">
+      <div class="main">
+        <h4>SO-2026-008 &nbsp; <span class="tag-status picked">Picked</span></h4>
+        <p class="small" style="margin-top:-6px;">Bob's Bargain Shop — 3 lines — NZD $147.98</p>
+        <div style="display:flex; gap:8px; align-items:center; margin-top:14px;">
+          <input style="border:1px solid var(--line); padding:6px 8px; border-radius:6px; width:240px;" placeholder="Tracking reference" value="NZP-9912334">
+          <span class="btn green">Ship</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Steps</h3>
+  <ol>
+    <li>Log in as <strong>WAREHOUSE</strong>.</li>
+    <li>Open the SO you confirmed in Mission 5.</li>
+    <li>Click <strong>Mark Picked</strong>. Status flips to <span class="tag-status picked">Picked</span>.</li>
+    <li>A tracking-reference text box should appear. Type a fake tracking number, e.g. <code>NZP-TEST-001</code>.</li>
+    <li>Click <strong>Ship</strong>. Status flips to <span class="tag-status shipped">Shipped</span>, and the tracking number is shown.</li>
+    <li>Go to <strong>Inventory</strong> — the products from this order should now have <em>lower</em> stock.</li>
+  </ol>
+
+  <h3>What to check off</h3>
+  <ul class="checklist">
+    <li>You can't ship without typing a tracking reference.</li>
+    <li>Once shipped, the SO can't be edited anymore (no buttons to go back).</li>
+    <li>Stock levels go down by the right amount.</li>
+    <li>The order shows up under "Shipped" if there's a filter.</li>
+  </ul>
+</div>
+
+<!-- ============== MISSION 7 — QUICKBOOKS ============== -->
+<div class="mission" id="m7">
+  <span class="tag">MISSION 7</span>
+  <h2>Send it to QuickBooks</h2>
+
+  <p><strong>Goal:</strong> push the orders you just created from this app into QuickBooks (the bookkeeping software). Sales Orders become QuickBooks <strong>Invoices</strong>. Purchase Orders become QuickBooks <strong>Bills</strong>.</p>
+
+  <div class="card warn">
+    <strong>Important:</strong> QuickBooks is real. The invoices and bills you create here will appear in the actual QuickBooks file. Only do this <strong>once</strong>, with the test orders you made in Missions 3–6. Don't click Sync more than once per session.
+  </div>
+
+  <h3>What you'll see</h3>
+  <div class="mock">
+    <div class="titlebar">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <div class="url">/settings/quickbooks</div>
+    </div>
+    <div class="body no-sidebar">
+      <div class="main">
+        <h4>QuickBooks Online</h4>
+        <div style="border:1px solid var(--line); border-radius:8px; padding:12px;">
+          <strong>Connection</strong>
+          <p class="small">Connected to Realm <code>1234567890</code> · Access token auto-refreshes</p>
+          <span class="btn ghost">Reconnect</span>
+          <span class="btn">Sync all to QuickBooks</span>
+        </div>
+
+        <div style="border:1px solid var(--line); border-radius:8px; padding:12px; margin-top:12px;">
+          <strong>Pending / failed sync jobs</strong>
+          <table class="fake" style="margin-top:8px;">
+            <thead><tr><th>When</th><th>Type</th><th>Status</th><th>Error</th></tr></thead>
+            <tbody>
+              <tr><td>Today, 2:14pm</td><td>INVOICE</td><td><span class="tag-status received">SUCCESS</span></td><td>—</td></tr>
+              <tr><td>Today, 2:14pm</td><td>BILL</td><td><span class="tag-status received">SUCCESS</span></td><td>—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Steps</h3>
+  <ol>
+    <li>Log in as <strong>ADMIN</strong>. Only admins can sync to QuickBooks.</li>
+    <li>Go to <strong>Settings</strong> → <strong>QuickBooks</strong>.</li>
+    <li>Confirm there's a "Connected to Realm …" line. If it says "Not connected", stop and tell Dad.</li>
+    <li>Click <strong>Sync all to QuickBooks</strong> (the button with the spinning circle icon).</li>
+    <li>Wait. A toast at the bottom of the screen will say something like "Synced 2 ok" — that's good.</li>
+    <li>Refresh the page. The "Pending / failed sync jobs" table should show the things you just synced as <span class="tag-status received">SUCCESS</span>.</li>
+  </ol>
+
+  <h3>What to check off</h3>
+  <ul class="checklist">
+    <li>The toast appears within ~10 seconds.</li>
+    <li>No jobs end up as <span class="tag-status cancelled">FAILED</span>.</li>
+    <li>If any do fail, write the error message <strong>word for word</strong> into the bug log. Especially anything mentioning "GST" or "tax".</li>
+    <li>Going back into QuickBooks itself (Dad will check), the new Invoice and Bill should appear with correct dollar amounts and 15% GST.</li>
+  </ul>
+
+  <h3>Bonus: the Tax page</h3>
+  <ol>
+    <li>Go to <strong>Settings</strong> → <strong>Tax</strong>.</li>
+    <li>Look at the "Mapping to QuickBooks NZ tax codes" table.</li>
+    <li>Every row should have a green badge in the "In your QBO file" column.</li>
+    <li>If any row says <em>Not found</em> in red, screenshot it. That's a real bug.</li>
+  </ol>
+</div>
+
+<!-- ============== MISSION 8 — BONUS ============== -->
+<div class="mission" id="m8">
+  <span class="tag">MISSION 8</span>
+  <h2>Bonus rounds</h2>
+
+  <p>If you're still going, try these. Each one is a smaller test — pick the ones that interest you.</p>
+
+  <h3>8a. Add a new customer</h3>
+  <ol>
+    <li>As SALES, go to <strong>Customers</strong> → <strong>New customer</strong>.</li>
+    <li>Make up a name, email, and pick a tax rule (<code>GST 15%</code> for a NZ shop).</li>
+    <li>Save. Go back to <strong>New SO</strong> — your new customer should be in the dropdown.</li>
+  </ol>
+
+  <h3>8b. Add a new supplier</h3>
+  <ol>
+    <li>As ADMIN, go to <strong>Suppliers</strong> → <strong>New supplier</strong>.</li>
+    <li>Try one in AUD with tax rule "Import GST" (overseas).</li>
+    <li>Try a NZ one with "GST 15%".</li>
+    <li>Try making a PO with each — does the currency change correctly?</li>
+  </ol>
+
+  <h3>8c. Proforma invoice</h3>
+  <p>A proforma is like a quote you send before the customer commits.</p>
+  <ol>
+    <li>Go to <strong>Proforma Invoices</strong> → <strong>New</strong>.</li>
+    <li>Fill it out for a customer.</li>
+    <li>Save and check it shows in the list.</li>
+    <li>(Bonus) See if there's a button to convert it into a real Sales Order.</li>
+  </ol>
+
+  <h3>8d. Stock reservation</h3>
+  <p>A reservation is "hold this for me, I'm thinking about it".</p>
+  <ol>
+    <li>Go to <strong>Reservations</strong> → <strong>New reservation</strong>.</li>
+    <li>Reserve some stock for a customer.</li>
+    <li>Go to <strong>Inventory</strong> — the available stock should be lower (because some is reserved).</li>
+    <li>Release the reservation. Stock should be available again.</li>
+  </ol>
+
+  <h3>8e. Reports</h3>
+  <ol>
+    <li>Go to <strong>Reports</strong>.</li>
+    <li>Open each report. Check the numbers don't look obviously wrong (no negative stock, no $0.00 totals when there should be money).</li>
+    <li>Try the date filters if there are any.</li>
+  </ol>
+
+  <h3>8f. Try things on a phone</h3>
+  <ol>
+    <li>Open the URL on your phone.</li>
+    <li>Try logging in.</li>
+    <li>Try at least one Mission (browse around, or look at a PO).</li>
+    <li>Note anything that looks broken at small screen size.</li>
+  </ol>
+</div>
+
+<!-- ============== BUG LOG ============== -->
+<h2 id="bugs">When something breaks: the bug log</h2>
+
+<p>For every weird thing you find, write down:</p>
+
+<div class="card">
+  <table class="fake" style="font-size:14px;">
+    <thead><tr><th>Field</th><th>What to write</th></tr></thead>
+    <tbody>
+      <tr><td><strong>What you were doing</strong></td><td>e.g. "Trying to confirm a sales order with 2 lines"</td></tr>
+      <tr><td><strong>Which user</strong></td><td>ADMIN, SALES, or WAREHOUSE</td></tr>
+      <tr><td><strong>The URL in the address bar</strong></td><td>copy/paste the full URL</td></tr>
+      <tr><td><strong>What you expected</strong></td><td>"The SO would change to Confirmed"</td></tr>
+      <tr><td><strong>What actually happened</strong></td><td>"It showed a red error: 'Cannot read property X of undefined'"</td></tr>
+      <tr><td><strong>Screenshot</strong></td><td>Always include one if there's anything visual</td></tr>
+      <tr><td><strong>Browser console</strong> (optional)</td><td>If F12 shows red error text, paste it</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h3>Severity</h3>
+<p>Mark each bug as one of:</p>
+<ul>
+  <li><span class="pill bad">BLOCKER</span> — the app is unusable, or something dangerous happens (wrong stock, wrong money).</li>
+  <li><span class="pill warn">MAJOR</span> — a feature is broken but you can work around it.</li>
+  <li><span class="pill brand">MINOR</span> — typos, alignment issues, weird wording.</li>
+</ul>
+
+<h3>Example bug entry</h3>
+<div class="card">
+  <p style="margin-top:0;">
+    <strong>BLOCKER · WAREHOUSE user · /purchase-orders/clxz123</strong><br>
+    Tried to receive a partial PO with 5 of 20 units. Clicked "Receive Stock". Page showed
+    a red error "Server error 500". Stock did <em>not</em> go up. PO still shows as Ordered.
+    <br><em>Repro:</em> happens every time on this PO.
+    <br><em>Console:</em> "TypeError: Cannot read property 'qty' of null at receive.ts:42".
+  </p>
+</div>
+
+<hr class="soft">
+
+<div class="card tip">
+  <strong>Final note:</strong> if you finish all eight missions and the bug log is short — that's
+  fantastic. Doesn't mean there are no bugs. It means the obvious ones are gone, and the
+  tricky ones are next. Either way, thank you. Real testing is hard work, and you just did
+  some.
+</div>
+
+<p class="small" style="margin-top:30px;">
+  Generated for the NZ Inventory app · for internal testing use only.
+</p>
+
+</div>
+</body>
+</html>
