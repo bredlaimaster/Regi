@@ -3,8 +3,8 @@ import type { MetadataRoute } from "next";
 /**
  * PWA manifest. Served at `/manifest.webmanifest` by Next.js.
  *
- * When Capacitor wraps this app into an APK, the manifest is used to seed
- * the app name / icons / display mode for the WebView shell too.
+ * Mobile flows are installable as a PWA (Chrome → "Install app"). No native
+ * wrapper — we tried Capacitor and reverted; see `docs/MOBILE.md`.
  *
  * Icons: swap the placeholder SVG for proper PNGs (192px + 512px) under
  * `public/icons/` before shipping to production.

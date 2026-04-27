@@ -1,7 +1,19 @@
 # Mobile app — architecture & operator's manual
 
-**Status:** v1 shipped. Works as an installable PWA today. Will be packaged as
-an Android APK via Capacitor.
+**Status:** v1 shipped. Web-only: runs in Chrome on Android, installable as a
+PWA. **No native APK / Capacitor** — see the note below.
+
+> ### Note on the abandoned APK
+>
+> We briefly prototyped a Capacitor-based Android APK that wrapped the web app
+> in a WebView and used `@capacitor-mlkit/barcode-scanning` for native ML Kit
+> scanning. On the target device (Samsung Galaxy S24 Ultra) the APK path was
+> faulty — the camera overlay stayed black and code changes on the server
+> didn't always reflect in the WebView. The web path in plain Chrome was rock
+> solid, so we deleted all Capacitor infrastructure (the `android/`, `capacitor/`
+> directories, `capacitor.config.ts`, and the `@capacitor/*` npm packages).
+> **Do not reintroduce Capacitor without re-evaluating the WebView issue.**
+> If you want a home-screen icon, install the PWA from Chrome's menu.
 
 ## What it does
 
@@ -17,22 +29,6 @@ Each flow is scanner-first: the camera reads a barcode, the server resolves
 it to a product, the UI stages a quantity change, and a single commit at the
 end writes the delta atomically on the server.
 
-## Why "Option 5 — Capacitor"
-
-We picked Capacitor over alternatives (pure PWA, Bubblewrap TWA, React
-Native, native Kotlin) because it's the only option that gives:
-
-1. A real signed **Android APK** for sideload.
-2. **Native ML Kit barcode scanning** via `@capacitor/mlkit-barcode-scanning`.
-3. **One codebase** — the APK shell just loads the live `/mobile/*` routes.
-4. **Zero change to auth** — the WebView carries the existing iron-session
-   cookie the same way Chrome does.
-5. **Zero new backend surface** — every write delegates to server actions
-   that the desktop UI already uses.
-
-Trade: the UI runs in a WebView, which is ~90% native perf. For a scan-heavy
-flow this is invisible.
-
 ## Files
 
 ```
@@ -47,12 +43,10 @@ components/mobile/barcode-scanner.tsx   camera + manual-entry scanner
 components/mobile/mobile-header.tsx     compact sticky header
 components/mobile/tile-link.tsx         large touch target tile
 lib/mobile/sort-by-bin.ts               pure sort helper (pick-path order)
-capacitor.config.ts                     Capacitor wrapper config
-capacitor/www/index.html                stub so the CLI is happy
-public/icons/icon.svg                   PWA / APK icon placeholder
+public/icons/icon.svg                   PWA icon placeholder
 ```
 
-New tests:
+Tests:
 
 ```
 __tests__/lib/sort-by-bin.test.ts       pure unit tests
@@ -105,22 +99,58 @@ When you hand over the real placement hierarchy, replace the body of
 
 ## Scanner behaviour
 
-`components/mobile/barcode-scanner.tsx` has two branches:
+`components/mobile/barcode-scanner.tsx` uses the web `BarcodeDetector` Shape
+Detection API with a `getUserMedia` camera stream. It exposes two modes,
+toggled by a segmented control at the top:
 
-1. **Native `BarcodeDetector`** — used when `"BarcodeDetector" in window`.
-   Chrome ≥83 on Android and all modern WebViews. Zero JS bundle cost.
-2. **Manual-entry fallback** — if the API is absent, the component renders
-   a text input. It's always visible as a belt-and-braces option for
-   damaged barcodes.
+- **Auto** (default): camera runs continuously while `active=true`. Every
+  decoded barcode fires `onDetect`, with a **1-second global cooldown** so
+  the loop doesn't re-fire on the same label while the picker is still
+  holding it. `AUTO_SCAN_COOLDOWN_MS` at the top of the file is the seam —
+  widen it for noisy reads, shrink it for faster double-scans.
+- **Manual**: camera is OFF until the user taps the "Tap to scan" button.
+  When tapped, the camera opens, the first detection fires `onDetect`, and
+  the camera tears down again. Tap again for the next item. Saves battery
+  for stocktake-style flows where scans are sparse.
+
+Both modes share the same `getUserMedia` + `BarcodeDetector` pipeline. A
+`manualArmed` flag gates whether detections are emitted in Manual mode.
 
 Supported formats: EAN-13, EAN-8, UPC-A/E, Code-128, Code-39, Code-93, ITF,
-QR. The `SUPPORTED_FORMATS` constant at the top of the file is the seam —
-narrow it if you want to harden scanning against noise.
+QR. The `FORMATS` constant at the top of the file is the seam — narrow it
+if you want to harden scanning against noise.
 
-`getUserMedia` requires a **secure context**. On `localhost` or inside the
-Capacitor WebView this is automatic. On a plain-HTTP ALB the camera branch
-won't start — the fallback input does. See "Deployment prerequisites"
-below.
+If `BarcodeDetector` is absent (rare — Chrome ≥83 covers everything we
+care about), the camera block disappears and only the manual-entry input
+remains. The manual input is **always visible** below the camera, so
+damaged/missing barcodes never block a picker.
+
+## Deployment prerequisites (secure context)
+
+`getUserMedia` requires a **secure context**. Chrome blocks it on plain-HTTP
+origins outside `localhost`.
+
+For the warehouse/production rollout we need **HTTPS on the ALB** — one ACM
+cert + an HTTPS listener on the existing ALB is the whole fix.
+
+### Dev/demo on plain HTTP (current state)
+
+While the ALB is still HTTP-only, picking staff must enable one Chrome
+flag per device to unblock the camera:
+
+1. Open `chrome://flags/#unsafely-treat-insecure-origin-as-secure`
+2. Paste the ALB URL (e.g. `http://WebLoadBalancer-tbaambtx-482012902.ap-southeast-2.elb.amazonaws.com`)
+3. Set the flag to **Enabled**, restart Chrome.
+
+This is fine for sandbox / internal testing. Remove it the moment the
+ALB gets a real certificate.
+
+### Install as a PWA
+
+Chrome → ⋮ menu → **Install app** (or "Add to Home screen"). This gives a
+home-screen icon and a standalone window (no browser chrome). PWA installs
+inherit the Chrome camera permission, so grant camera access once in a
+normal Chrome tab **before** installing.
 
 ## Auth
 
@@ -133,63 +163,6 @@ The PWA manifest at `/manifest.webmanifest` and the `/icons/*` path are
 allowlisted in middleware so the OS install prompt can read them without a
 session.
 
-## Deployment prerequisites
-
-Before you hand the APK to the warehouse:
-
-1. **HTTPS on the ALB.** Capacitor on Android ≥9 blocks cleartext by
-   default (we've explicitly set `cleartext: false` in `capacitor.config.ts`).
-   The PWA camera also requires HTTPS in Chrome outside localhost. One ACM
-   cert + ALB HTTPS listener = both problems solved.
-2. **`SESSION_SECRET`** stays unchanged — same cookie as the desktop app.
-3. The `CAPACITOR_SERVER_URL` env var must be set to the production URL
-   before running `npx cap sync`.
-
-## Building the APK (one-time)
-
-```bash
-# 1. Install Capacitor — these are not yet pinned in package.json.
-npm i -D @capacitor/cli @capacitor/core @capacitor/android
-npm i @capacitor/mlkit-barcode-scanning        # future: for native ML Kit
-
-# 2. Scaffold the Android project (creates /android with the Gradle files).
-CAPACITOR_SERVER_URL=https://your-domain.example \
-  npx cap add android
-
-# 3. Sync config and copy assets.
-CAPACITOR_SERVER_URL=https://your-domain.example \
-  npx cap sync
-
-# 4. Build an APK. For dev sideload: Android Studio → Build → Build APK.
-#    For a signed release APK, configure a keystore in android/app/build.gradle.
-npx cap open android
-```
-
-Android Studio outputs the unsigned APK at
-`android/app/build/outputs/apk/debug/app-debug.apk`. Sideload with
-`adb install app-debug.apk` while the phone is in developer mode with USB
-debugging enabled.
-
-### Permissions
-
-The APK needs the camera permission. Add to
-`android/app/src/main/AndroidManifest.xml`:
-
-```xml
-<uses-permission android:name="android.permission.CAMERA" />
-<uses-feature android:name="android.hardware.camera" android:required="true" />
-```
-
-### Swapping in native ML Kit (recommended before shipping to users)
-
-The `BarcodeScanner` consumer API is `{ active, onDetect, onError }`. When
-you're ready to use native ML Kit instead of the web `BarcodeDetector`,
-replace the camera-loop effect in `components/mobile/barcode-scanner.tsx`
-with a call to `BarcodeScanner.startScan` from
-`@capacitor/mlkit-barcode-scanning`. Detect the Capacitor runtime with
-`Capacitor.isNativePlatform()` — the manual-entry fallback stays intact for
-the PWA path.
-
 ## Testing
 
 ```bash
@@ -197,7 +170,7 @@ npm test          # vitest run
 npm run test:watch
 ```
 
-Added tests cover:
+Tests cover:
 
 - `sortLinesByBin` — 6 cases (order, unallocated-last, tie break, purity,
   empty, whitespace).
@@ -221,15 +194,6 @@ their own coverage.
   still the place for supplier invoices, freight, and expiry dates.
 - Receive page doesn't show "put away to bin" prompts yet — it just sorts
   lines by bin. Add a big bin callout once there's a real placement map.
-- No hand-roll of the `BarcodeDetector` output for noisy warehouses — we
-  trust the first detection. If false reads become an issue, require two
-  consecutive identical reads before firing `onDetect`.
-
-## Performance notes
-
-- Pick / receive pages are `export const dynamic = "force-dynamic"` — we
-  always want fresh `qtyPicked`/`qtyReceived`.
-- The scanner uses `requestAnimationFrame` with a 600ms cooldown after a
-  successful detect to avoid duplicate fires.
-- The camera `MediaStream` is torn down on unmount and when `active` flips
-  false, to release the hardware for other apps.
+- No double-read confirmation. If false reads become an issue in a noisy
+  warehouse, require two consecutive identical reads before firing
+  `onDetect`.

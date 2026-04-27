@@ -39,8 +39,6 @@
   "exclude": [
     "node_modules",
     "sst.config.ts",
-    ".sst",
-    "capacitor.config.ts",
-    "capacitor"
+    ".sst"
   ]
 }
