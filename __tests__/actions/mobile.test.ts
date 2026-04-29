@@ -16,8 +16,9 @@ const mocks = vi.hoisted(() => ({
 }));
 
 // Mock auth so every test is "logged in" as a fixed tenant.
+// (RBAC rollout swapped requireSession → requireRole in actions/mobile.ts.)
 vi.mock("@/lib/auth", () => ({
-  requireSession: vi.fn(async () => ({
+  requireRole: vi.fn(async () => ({
     userId: "user-1",
     email: "warehouse@example.co.nz",
     tenantId: "tenant-A",
@@ -55,6 +56,7 @@ import {
   receivablePurchaseOrders,
   getReceiveSheet,
 } from "@/actions/mobile";
+import { BarcodeSchema, IdSchema } from "@/lib/schemas/mobile";
 
 beforeEach(() => {
   mockProductFindFirst.mockReset();
@@ -286,5 +288,39 @@ describe("getReceiveSheet", () => {
     });
     const res = await getReceiveSheet({ id: "po1" });
     expect(res.ok).toBe(false);
+  });
+});
+
+// ─── Pure Zod schemas (no mocks needed) ───────────────────────────────────────
+
+describe("BarcodeSchema", () => {
+  it("accepts a non-empty code", () => {
+    expect(BarcodeSchema.safeParse({ code: "9400550000016" }).success).toBe(true);
+  });
+  it("trims whitespace", () => {
+    const r = BarcodeSchema.safeParse({ code: "  9400550000016  " });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.code).toBe("9400550000016");
+  });
+  it("rejects empty string", () => {
+    expect(BarcodeSchema.safeParse({ code: "" }).success).toBe(false);
+  });
+  it("rejects whitespace-only after trim", () => {
+    expect(BarcodeSchema.safeParse({ code: "   " }).success).toBe(false);
+  });
+  it("requires the code field", () => {
+    expect(BarcodeSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+describe("IdSchema", () => {
+  it("accepts a non-empty id", () => {
+    expect(IdSchema.safeParse({ id: "x" }).success).toBe(true);
+  });
+  it("rejects empty id", () => {
+    expect(IdSchema.safeParse({ id: "" }).success).toBe(false);
+  });
+  it("requires the id field", () => {
+    expect(IdSchema.safeParse({}).success).toBe(false);
   });
 });

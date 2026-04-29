@@ -1,19 +1,11 @@
 "use server";
 
 import { z } from "zod";
+import { CreateReservationSchema } from "@/lib/schemas/reservations";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole, assertTenant } from "@/lib/auth";
 import type { ActionResult } from "@/lib/types";
-
-const CreateReservationSchema = z.object({
-  productId: z.string(),
-  customerId: z.string().optional().nullable(),
-  repId: z.string().optional().nullable(),
-  qtyReserved: z.coerce.number().int().positive(),
-  expiresAt: z.string().optional().nullable(), // ISO date string
-  notes: z.string().optional().nullable(),
-});
 
 export async function createReservation(input: unknown): Promise<ActionResult<{ id: string }>> {
   const session = await requireRole(["ADMIN", "SALES"]);

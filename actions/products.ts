@@ -1,34 +1,11 @@
 "use server";
 import { z } from "zod";
+import { ProductSchema, GroupPriceSchema, SavePricesSchema } from "@/lib/schemas/products";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole, assertTenant } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { ActionResult } from "@/lib/types";
-
-const ProductSchema = z.object({
-  id: z.string().optional(),
-  sku: z.string().min(1).max(64),
-  name: z.string().min(1).max(200),
-  description: z.string().optional().nullable(),
-  unit: z.string().default("EA"),
-  sellPriceNzd: z.coerce.number().nonnegative(),
-  reorderPoint: z.coerce.number().int().nonnegative().default(0),
-  imageUrl: z.string().url().optional().nullable(),
-  notes: z.string().optional().nullable(),
-  supplierId: z.string().optional().nullable(),
-  // Phase A
-  brandId: z.string().optional().nullable(),
-  costNzd: z.coerce.number().nonnegative().optional().nullable(),
-  caseQty: z.coerce.number().int().positive().default(1),
-  isTester: z.boolean().default(false),
-  active: z.boolean().default(true),
-  // Client data fields
-  supplierCode: z.string().optional().nullable(),
-  binLocation: z.string().optional().nullable(),
-  unitBarcode: z.string().optional().nullable(),
-  caseBarcode: z.string().optional().nullable(),
-});
 
 export async function upsertProduct(input: unknown): Promise<ActionResult> {
   const session = await requireRole(["ADMIN", "SALES"]);
@@ -67,17 +44,6 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
 }
 
 // ─── Price-group pricing ─────────────────────────────────────────────────────
-
-const GroupPriceSchema = z.object({
-  priceGroupId: z.string().min(1),
-  unitPrice: z.coerce.number().nonnegative(),
-  minQty: z.coerce.number().int().positive().default(1),
-});
-
-const SavePricesSchema = z.object({
-  productId: z.string(),
-  prices: z.array(GroupPriceSchema),
-});
 
 /**
  * Replace all price-group prices for a product (delete-and-recreate).

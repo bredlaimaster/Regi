@@ -1,15 +1,10 @@
 "use server";
 import { z } from "zod";
+import { CreateSchema } from "@/lib/schemas/scheduled-reports";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole, assertTenant } from "@/lib/auth";
 import type { ActionResult } from "@/lib/types";
-
-const CreateSchema = z.object({
-  reportKey: z.string().min(1),
-  cronExpr: z.string().min(1).regex(/^[\d*\/,\- ]+$/, "Invalid cron expression"),
-  recipients: z.array(z.string().email()).min(1).max(20),
-});
 
 export async function createScheduledReport(input: unknown): Promise<ActionResult> {
   const session = await requireRole(["ADMIN"]);

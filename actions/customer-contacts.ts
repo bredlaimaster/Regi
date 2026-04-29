@@ -1,26 +1,10 @@
 "use server";
 import { z } from "zod";
+import { ContactSchema } from "@/lib/schemas/customer-contacts";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole, assertTenant } from "@/lib/auth";
 import type { ActionResult } from "@/lib/types";
-
-const ContactSchema = z.object({
-  id: z.string().optional(),
-  customerId: z.string(),
-  firstName: z.string().optional().nullable(),
-  lastName: z.string().optional().nullable(),
-  email: z.string().email().optional().or(z.literal("")).nullable(),
-  website: z.string().optional().nullable(),
-  tollFreeNo: z.string().optional().nullable(),
-  phone: z.string().optional().nullable(),
-  fax: z.string().optional().nullable(),
-  mobilePhone: z.string().optional().nullable(),
-  officePhone: z.string().optional().nullable(),
-  ddi: z.string().optional().nullable(),
-  comments: z.string().optional().nullable(),
-  isPurchasing: z.boolean().default(false),
-});
 
 export async function upsertCustomerContact(input: unknown): Promise<ActionResult<{ id: string }>> {
   const session = await requireRole(["ADMIN", "SALES"]);

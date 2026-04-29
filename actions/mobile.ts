@@ -12,16 +12,13 @@
  *  - Zero schema changes beyond two indexes on Product (added in schema.prisma).
  */
 import { z } from "zod";
+import { BarcodeSchema, IdSchema } from "@/lib/schemas/mobile";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { sortLinesByBin } from "@/lib/mobile/sort-by-bin";
 import type { ActionResult } from "@/lib/types";
 
 // ─── Barcode resolver ────────────────────────────────────────────────────────
-
-const BarcodeSchema = z.object({
-  code: z.string().trim().min(1, "Empty barcode"),
-});
 
 export type ResolvedBarcode = {
   productId: string;
@@ -124,8 +121,6 @@ export type PickSheet = {
   status: string;
   lines: PickSheetLine[];
 };
-
-const IdSchema = z.object({ id: z.string().min(1) });
 
 /** Single SO with lines ordered by bin — this is the pick path. */
 export async function getPickSheet(input: unknown): Promise<ActionResult<PickSheet>> {

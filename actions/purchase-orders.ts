@@ -1,5 +1,6 @@
 "use server";
 import { z } from "zod";
+import { LineSchema, PoSchema, PartialReceiveLineSchema, ReceiveChargeSchema, PartialReceiveSchema } from "@/lib/schemas/purchase-orders";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole, assertTenant } from "@/lib/auth";
@@ -9,22 +10,6 @@ import type { ActionResult } from "@/lib/types";
 import { enqueueQboSync } from "@/lib/quickbooks/sync";
 import { SUPPORTED_CURRENCIES } from "@/lib/currency";
 import { getLatestRate } from "@/lib/fx";
-
-const LineSchema = z.object({
-  productId: z.string(),
-  qtyOrdered: z.coerce.number().int().positive(),
-  unitCost: z.coerce.number().nonnegative(),
-});
-
-const PoSchema = z.object({
-  id: z.string().optional(),
-  supplierId: z.string(),
-  currency: z.enum(SUPPORTED_CURRENCIES),
-  expectedDate: z.string().optional().nullable(),
-  freight: z.coerce.number().nonnegative().optional().nullable(),
-  notes: z.string().optional().nullable(),
-  lines: z.array(LineSchema).min(1),
-});
 
 export async function upsertPurchaseOrder(input: unknown): Promise<ActionResult<{ id: string }>> {
   const session = await requireRole(["ADMIN", "WAREHOUSE"]);
@@ -194,29 +179,6 @@ export async function receivePurchaseOrder(id: string): Promise<ActionResult> {
 }
 
 // ─── Partial PO receive ───────────────────────────────────────────────────────
-
-const PartialReceiveLineSchema = z.object({
-  lineId: z.string(),
-  productId: z.string(),
-  qtyReceiving: z.coerce.number().int().positive(),
-  batchCode: z.string().nullable().optional(),
-  expiryDate: z.string().nullable().optional(), // ISO date string or null
-});
-
-const ReceiveChargeSchema = z.object({
-  label: z.string().min(1),
-  amount: z.coerce.number().nonnegative(),
-  currency: z.string().default("NZD"),
-  taxRate: z.coerce.number().nonnegative().default(0), // 0 or 15
-  invoiceRef: z.string().nullable().optional(),
-});
-
-const PartialReceiveSchema = z.object({
-  poId: z.string(),
-  lines: z.array(PartialReceiveLineSchema).min(1),
-  freightOverride: z.coerce.number().nonnegative().nullable().optional(),
-  charges: z.array(ReceiveChargeSchema).optional(),
-});
 
 export async function partialReceivePurchaseOrder(input: unknown): Promise<ActionResult> {
   const session = await requireRole(["ADMIN", "WAREHOUSE"]);

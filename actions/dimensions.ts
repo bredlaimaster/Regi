@@ -1,11 +1,10 @@
 "use server";
 import { z } from "zod";
+import { NameSchema } from "@/lib/schemas/dimensions";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole, assertTenant } from "@/lib/auth";
 import type { ActionResult } from "@/lib/types";
-
-const NameSchema = z.object({ id: z.string().optional(), name: z.string().min(1).max(100) });
 
 // ─── Brands ───────────────────────────────────────────────────────────────────
 

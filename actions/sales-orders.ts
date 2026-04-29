@@ -1,5 +1,6 @@
 "use server";
 import { z } from "zod";
+import { LineSchema, SoSchema, ShipSchema, PartialPickSchema } from "@/lib/schemas/sales-orders";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole, assertTenant } from "@/lib/auth";
@@ -8,18 +9,6 @@ import { formatDocNumber } from "@/lib/utils";
 import { enqueueQboSync } from "@/lib/quickbooks/sync";
 import type { ActionResult } from "@/lib/types";
 import { AUTO_REBATE_PCT } from "@/lib/constants";
-
-const LineSchema = z.object({
-  productId: z.string(),
-  qtyOrdered: z.coerce.number().int().positive(),
-});
-
-const SoSchema = z.object({
-  id: z.string().optional(),
-  customerId: z.string(),
-  notes: z.string().optional().nullable(),
-  lines: z.array(LineSchema).min(1),
-});
 
 export async function upsertSalesOrder(input: unknown): Promise<ActionResult<{ id: string }>> {
   const session = await requireRole(["ADMIN", "SALES"]);
@@ -164,8 +153,6 @@ export async function setSoStatus(
   return { ok: true, data: null };
 }
 
-const ShipSchema = z.object({ id: z.string(), trackingRef: z.string().min(1) });
-
 export async function shipSalesOrder(input: unknown): Promise<ActionResult> {
   const session = await requireRole(["ADMIN", "SALES"]);
   const parsed = ShipSchema.safeParse(input);
@@ -219,14 +206,6 @@ export async function shipSalesOrder(input: unknown): Promise<ActionResult> {
   revalidatePath(`/sales-orders/${so.id}`);
   return { ok: true, data: null };
 }
-
-const PartialPickSchema = z.object({
-  soId: z.string(),
-  lines: z.array(z.object({
-    lineId: z.string(),
-    qtyPicking: z.coerce.number().int().min(1),
-  })).min(1),
-});
 
 export async function partialPickSalesOrder(input: unknown): Promise<ActionResult> {
   const session = await requireRole(["ADMIN", "WAREHOUSE"]);

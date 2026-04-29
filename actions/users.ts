@@ -1,5 +1,6 @@
 "use server";
 import { z } from "zod";
+import { CreateSchema, SetPasswordSchema, SignInSchema } from "@/lib/schemas/users";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -10,18 +11,6 @@ import {
   hashPassword,
 } from "@/lib/auth";
 import type { ActionResult } from "@/lib/types";
-
-const CreateSchema = z.object({
-  email: z.string().email(),
-  name: z.string().min(1).optional().nullable(),
-  role: z.enum(["ADMIN", "SALES", "WAREHOUSE"]),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-});
-
-const SetPasswordSchema = z.object({
-  id: z.string(),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-});
 
 /**
  * Create a user with an immediate password — they can log in right away.
@@ -93,11 +82,6 @@ export async function deleteUser(id: string): Promise<ActionResult> {
 }
 
 // ─── Login / Logout ──────────────────────────────────────────────────────────
-
-const SignInSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-});
 
 export async function signInAction(input: unknown): Promise<ActionResult> {
   const parsed = SignInSchema.safeParse(input);

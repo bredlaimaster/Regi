@@ -1,5 +1,6 @@
 "use server";
 import { z } from "zod";
+import { UploadSchema } from "@/lib/schemas/budgets";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
@@ -11,11 +12,6 @@ const MONTH_MAP: Record<string, number> = {
 };
 
 const VALID_LINE_TYPES = ["SALES", "COGS", "GROSS_MARGIN", "FREIGHT_IN", "FREIGHT_OUT", "MARKETING", "REBATE"];
-
-const UploadSchema = z.object({
-  fiscalYear: z.number().int().min(2020).max(2099),
-  tsv: z.string().min(1),
-});
 
 export async function uploadBudget(
   input: unknown

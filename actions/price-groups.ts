@@ -1,17 +1,10 @@
 "use server";
 import { z } from "zod";
+import { GroupSchema } from "@/lib/schemas/price-groups";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole, assertTenant } from "@/lib/auth";
 import type { ActionResult } from "@/lib/types";
-
-const GroupSchema = z.object({
-  id: z.string().optional(),
-  name: z.string().min(1).max(100),
-  description: z.string().optional().nullable(),
-  isDefault: z.boolean().default(false),
-  sortOrder: z.coerce.number().int().nonnegative().default(0),
-});
 
 export async function upsertPriceGroup(
   input: unknown,
