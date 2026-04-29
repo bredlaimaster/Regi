@@ -1,4 +1,4 @@
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { getExpiryTracker } from "@/lib/reports/inventory";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatNzd, formatNzDate } from "@/lib/utils";
 
 export default async function ExpiryTrackerPage() {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const rows = await getExpiryTracker(session.tenantId);
 
   const redRows = rows.filter((r) => r.rag === "RED");

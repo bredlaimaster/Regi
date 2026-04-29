@@ -1,11 +1,11 @@
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PoForm } from "@/components/forms/po-form";
 import { getLatestRatesAll } from "@/lib/fx";
 import { SUPPORTED_CURRENCIES } from "@/lib/currency";
 
 export default async function NewPoPage() {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "WAREHOUSE"]);
   const [suppliers, products, rates] = await Promise.all([
     prisma.supplier.findMany({ where: { tenantId: session.tenantId }, orderBy: { name: "asc" } }),
     prisma.product.findMany({ where: { tenantId: session.tenantId }, orderBy: { name: "asc" } }),

@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireRole, requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { enqueueQboSync, processQboSyncJobs } from "@/lib/quickbooks/sync";
 import { listTaxCodes } from "@/lib/quickbooks/tax-codes";
 import type { ActionResult } from "@/lib/types";
@@ -75,7 +75,7 @@ export async function runFullQboSync(): Promise<ActionResult> {
  * against their actual QBO file.
  */
 export async function listQboTaxCodes(): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const conn = await prisma.qboConnection.findUnique({ where: { tenantId: session.tenantId } });
   if (!conn) return { ok: false, error: "QuickBooks is not connected" };
   try {

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { requireSession, assertTenant } from "@/lib/auth";
+import { requireRole, assertTenant } from "@/lib/auth";
 import type { ActionResult } from "@/lib/types";
 
 const AddressSchema = z.object({
@@ -41,7 +41,7 @@ const Schema = z.object({
 });
 
 export async function upsertSupplier(input: unknown): Promise<ActionResult<{ id: string }>> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const parsed = Schema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
   const { id, postalAddress, physicalAddress, ...rest } = parsed.data;
@@ -68,7 +68,7 @@ export async function upsertSupplier(input: unknown): Promise<ActionResult<{ id:
 }
 
 export async function deleteSupplier(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const s = await prisma.supplier.findUnique({ where: { id } });
   if (!s) return { ok: false, error: "Not found" };
   assertTenant(s.tenantId, session.tenantId);

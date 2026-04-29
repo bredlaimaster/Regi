@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireSession, assertTenant } from "@/lib/auth";
+import { requireRole, assertTenant } from "@/lib/auth";
 import type { ActionResult } from "@/lib/types";
 
 const NameSchema = z.object({ id: z.string().optional(), name: z.string().min(1).max(100) });
@@ -10,7 +10,7 @@ const NameSchema = z.object({ id: z.string().optional(), name: z.string().min(1)
 // ─── Brands ───────────────────────────────────────────────────────────────────
 
 export async function upsertBrand(input: unknown): Promise<ActionResult<{ id: string; name: string }>> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const parsed = NameSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid" };
   const { id, name } = parsed.data;
@@ -28,7 +28,7 @@ export async function upsertBrand(input: unknown): Promise<ActionResult<{ id: st
 }
 
 export async function deleteBrand(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const existing = await prisma.brand.findUnique({ where: { id } });
   if (!existing) return { ok: false, error: "Not found" };
   assertTenant(existing.tenantId, session.tenantId);
@@ -40,7 +40,7 @@ export async function deleteBrand(id: string): Promise<ActionResult> {
 // ─── Channels ─────────────────────────────────────────────────────────────────
 
 export async function upsertChannel(input: unknown): Promise<ActionResult<{ id: string; name: string }>> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const parsed = NameSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid" };
   const { id, name } = parsed.data;
@@ -58,7 +58,7 @@ export async function upsertChannel(input: unknown): Promise<ActionResult<{ id: 
 }
 
 export async function deleteChannel(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const existing = await prisma.channel.findUnique({ where: { id } });
   if (!existing) return { ok: false, error: "Not found" };
   assertTenant(existing.tenantId, session.tenantId);
@@ -70,7 +70,7 @@ export async function deleteChannel(id: string): Promise<ActionResult> {
 // ─── Territories ──────────────────────────────────────────────────────────────
 
 export async function upsertTerritory(input: unknown): Promise<ActionResult<{ id: string; name: string }>> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const parsed = NameSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid" };
   const { id, name } = parsed.data;
@@ -88,7 +88,7 @@ export async function upsertTerritory(input: unknown): Promise<ActionResult<{ id
 }
 
 export async function deleteTerritory(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const existing = await prisma.territory.findUnique({ where: { id } });
   if (!existing) return { ok: false, error: "Not found" };
   assertTenant(existing.tenantId, session.tenantId);

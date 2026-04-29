@@ -1,9 +1,9 @@
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ProductDetailTabs } from "@/components/products/product-detail-tabs";
 
 export default async function NewProductPage() {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const [suppliers, brands, priceGroups] = await Promise.all([
     prisma.supplier.findMany({ where: { tenantId: session.tenantId }, orderBy: { name: "asc" } }),
     prisma.brand.findMany({ where: { tenantId: session.tenantId }, orderBy: { name: "asc" } }),

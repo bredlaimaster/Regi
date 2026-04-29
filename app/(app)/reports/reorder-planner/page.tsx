@@ -1,4 +1,4 @@
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { currentFiscalYear } from "@/lib/reports/margin";
 import { getReorderPlanner } from "@/lib/reports/supplier";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,7 @@ export default async function ReorderPlannerPage({
 }: {
   searchParams: Promise<{ fy?: string }>;
 }) {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const sp = await searchParams;
   const fy = sp.fy ? parseInt(sp.fy) : currentFiscalYear();
   const rows = await getReorderPlanner(session.tenantId, fy);

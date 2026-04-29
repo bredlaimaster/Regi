@@ -1,4 +1,4 @@
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,7 +8,7 @@ import { formatNzd, formatNzDate } from "@/lib/utils";
 import Link from "next/link";
 
 export default async function ProformaListPage() {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const proformas = await prisma.proformaInvoice.findMany({
     where: { tenantId: session.tenantId },
     include: {

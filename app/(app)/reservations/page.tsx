@@ -1,4 +1,4 @@
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,7 +8,7 @@ import { NewReservationForm } from "./new-reservation-form";
 import { ReleaseReservationButton } from "./release-reservation-button";
 
 export default async function ReservationsPage() {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
 
   const [reservations, products, customers] = await Promise.all([
     prisma.stockReservation.findMany({

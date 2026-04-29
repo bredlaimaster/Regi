@@ -1,9 +1,9 @@
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { DocPdf, renderPdf } from "@/lib/pdf";
 
 export async function GET() {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const products = await prisma.product.findMany({
     where: { tenantId: session.tenantId },
     include: { stockLevel: true },

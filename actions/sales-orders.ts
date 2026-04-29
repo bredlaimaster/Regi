@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireSession, assertTenant } from "@/lib/auth";
+import { requireRole, assertTenant } from "@/lib/auth";
 import { applyStockMovement } from "@/lib/inventory";
 import { formatDocNumber } from "@/lib/utils";
 import { enqueueQboSync } from "@/lib/quickbooks/sync";
@@ -22,7 +22,7 @@ const SoSchema = z.object({
 });
 
 export async function upsertSalesOrder(input: unknown): Promise<ActionResult<{ id: string }>> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const parsed = SoSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid SO" };
   const { id, customerId, notes, lines } = parsed.data;
@@ -97,7 +97,7 @@ export async function setSoStatus(
   id: string,
   next: "CONFIRMED" | "PICKED" | "CANCELLED"
 ): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const so = await prisma.salesOrder.findUnique({
     where: { id },
     include: { lines: true, customer: true },
@@ -167,7 +167,7 @@ export async function setSoStatus(
 const ShipSchema = z.object({ id: z.string(), trackingRef: z.string().min(1) });
 
 export async function shipSalesOrder(input: unknown): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const parsed = ShipSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Tracking reference required" };
   const so = await prisma.salesOrder.findUnique({
@@ -229,7 +229,7 @@ const PartialPickSchema = z.object({
 });
 
 export async function partialPickSalesOrder(input: unknown): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "WAREHOUSE"]);
   const parsed = PartialPickSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid pick data" };
   const { soId, lines } = parsed.data;

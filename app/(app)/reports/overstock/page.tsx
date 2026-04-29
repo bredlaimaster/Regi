@@ -1,4 +1,4 @@
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { currentFiscalYear } from "@/lib/reports/margin";
 import { getOverstock } from "@/lib/reports/inventory";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,7 @@ export default async function OverstockPage({
 }: {
   searchParams: Promise<{ fy?: string; weeks?: string }>;
 }) {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const sp = await searchParams;
   const fy = sp.fy ? parseInt(sp.fy) : currentFiscalYear();
   const weeks = sp.weeks ? parseInt(sp.weeks) : 26;

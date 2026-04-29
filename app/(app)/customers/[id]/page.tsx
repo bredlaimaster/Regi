@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
-import { requireSession, assertTenant } from "@/lib/auth";
+import { requireRole, assertTenant } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { CustomerDetailTabs } from "@/components/customers/customer-detail-tabs";
 
 export default async function EditCustomer({ params }: { params: Promise<{ id: string }> }) {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const { id } = await params;
 
   const [c, channels, territories, salesReps, priceGroups] = await Promise.all([

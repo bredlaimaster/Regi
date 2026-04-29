@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireSession, assertTenant } from "@/lib/auth";
+import { requireRole, assertTenant } from "@/lib/auth";
 import { applyStockMovement } from "@/lib/inventory";
 import { formatDocNumber } from "@/lib/utils";
 import type { ActionResult } from "@/lib/types";
@@ -27,7 +27,7 @@ const PoSchema = z.object({
 });
 
 export async function upsertPurchaseOrder(input: unknown): Promise<ActionResult<{ id: string }>> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "WAREHOUSE"]);
   const parsed = PoSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid PO" };
   const { id, supplierId, currency, expectedDate, freight, notes, lines } = parsed.data;
@@ -95,7 +95,7 @@ export async function upsertPurchaseOrder(input: unknown): Promise<ActionResult<
 }
 
 export async function setPoStatus(id: string, status: "ORDERED" | "CANCELLED"): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "WAREHOUSE"]);
   const po = await prisma.purchaseOrder.findUnique({ where: { id } });
   if (!po) return { ok: false, error: "Not found" };
   assertTenant(po.tenantId, session.tenantId);
@@ -113,7 +113,7 @@ export async function setPoStatus(id: string, status: "ORDERED" | "CANCELLED"): 
  * RECEIVED and a QBO Bill sync job is enqueued.
  */
 export async function receivePurchaseOrder(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "WAREHOUSE"]);
   const po = await prisma.purchaseOrder.findUnique({
     where: { id },
     include: { lines: true },
@@ -219,7 +219,7 @@ const PartialReceiveSchema = z.object({
 });
 
 export async function partialReceivePurchaseOrder(input: unknown): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "WAREHOUSE"]);
   const parsed = PartialReceiveSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
   const { poId, lines: receiveLines, freightOverride, charges } = parsed.data;

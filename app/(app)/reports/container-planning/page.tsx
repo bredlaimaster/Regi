@@ -1,4 +1,4 @@
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { getContainerPlanning } from "@/lib/reports/supplier";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,7 +7,7 @@ import { formatNzd, formatNzDate } from "@/lib/utils";
 import { formatCurrency, type Currency } from "@/lib/currency";
 
 export default async function ContainerPlanningPage() {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const suppliers = await getContainerPlanning(session.tenantId);
 
   const totalNzd = suppliers.reduce((s, r) => s + r.totalValueNzd, 0);

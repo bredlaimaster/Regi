@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { requireSession, assertTenant } from "@/lib/auth";
+import { requireRole, assertTenant } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,7 @@ import { SoProformaButton } from "./so-proforma-button";
 import { PartialPickForm } from "./partial-pick-form";
 
 export default async function SoDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const { id } = await params;
   const so = await prisma.salesOrder.findUnique({
     where: { id },

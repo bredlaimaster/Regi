@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus } from "lucide-react";
 
 export default async function SuppliersPage() {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const rows = await prisma.supplier.findMany({
     where: { tenantId: session.tenantId },
     orderBy: { name: "asc" },

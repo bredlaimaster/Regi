@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { getStockOnHand } from "@/lib/reports/inventory";
 import { buildWorkbook, workbookToBuffer } from "@/lib/reports/xlsx";
 
 export async function GET() {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const rows = await getStockOnHand(session.tenantId);
 
   const totals = {

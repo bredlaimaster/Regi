@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { requireRole } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const SETTINGS_LINKS = [
@@ -12,7 +13,8 @@ const SETTINGS_LINKS = [
   { href: "/settings/audit", title: "Audit Trail", desc: "Every stock movement, ever." },
 ];
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  await requireRole(["ADMIN"]);
   return (
     <div className="space-y-4 max-w-2xl">
       <h1 className="text-2xl font-semibold">Settings</h1>

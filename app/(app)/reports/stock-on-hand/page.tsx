@@ -1,4 +1,4 @@
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { getStockOnHand } from "@/lib/reports/inventory";
 import { ExportButton } from "@/components/reports/export-button";
 import { LastSentBadge } from "@/components/reports/last-sent-badge";
@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatNzd } from "@/lib/utils";
 
 export default async function StockOnHandPage() {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const rows = await getStockOnHand(session.tenantId);
 
   const totalValue = rows.reduce((s, r) => s + r.valueNzd, 0);

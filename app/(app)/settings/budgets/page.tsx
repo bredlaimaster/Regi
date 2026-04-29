@@ -1,4 +1,4 @@
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -11,7 +11,7 @@ export default async function BudgetsPage({
 }: {
   searchParams: Promise<{ fy?: string }>;
 }) {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const sp = await searchParams;
   const fy = sp.fy ? parseInt(sp.fy) : currentFiscalYear();
 

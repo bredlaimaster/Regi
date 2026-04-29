@@ -7,12 +7,13 @@
  *    `partialReceivePurchaseOrder`, `adjustStock`) for all *writes*. This file
  *    only adds *reads* tailored to a phone: small payloads, bin-sorted, and
  *    a barcode resolver.
- *  - Every query is tenant-scoped via `requireSession().tenantId`.
+ *  - Every action enforces role gating via `requireRole(["ADMIN", "WAREHOUSE"])`
+ *    and is tenant-scoped via the returned session's `tenantId`.
  *  - Zero schema changes beyond two indexes on Product (added in schema.prisma).
  */
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { sortLinesByBin } from "@/lib/mobile/sort-by-bin";
 import type { ActionResult } from "@/lib/types";
 
@@ -38,7 +39,7 @@ export type ResolvedBarcode = {
  * `caseBarcode`. Returns ok:false if no match (so the UI can show a toast).
  */
 export async function resolveBarcode(input: unknown): Promise<ActionResult<ResolvedBarcode>> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "WAREHOUSE"]);
   const parsed = BarcodeSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Empty barcode" };
   const { code } = parsed.data;
@@ -79,7 +80,7 @@ export type PickableSo = {
 
 /** All CONFIRMED sales orders with at least one line still to pick. */
 export async function pickableSalesOrders(): Promise<ActionResult<PickableSo[]>> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "WAREHOUSE"]);
   const rows = await prisma.salesOrder.findMany({
     where: { tenantId: session.tenantId, status: "CONFIRMED" },
     include: { customer: { select: { name: true } }, lines: true },
@@ -128,7 +129,7 @@ const IdSchema = z.object({ id: z.string().min(1) });
 
 /** Single SO with lines ordered by bin — this is the pick path. */
 export async function getPickSheet(input: unknown): Promise<ActionResult<PickSheet>> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "WAREHOUSE"]);
   const parsed = IdSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid id" };
 
@@ -175,7 +176,7 @@ export type ReceivablePo = {
 
 /** All ORDERED POs with at least one line still to receive. */
 export async function receivablePurchaseOrders(): Promise<ActionResult<ReceivablePo[]>> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "WAREHOUSE"]);
   const rows = await prisma.purchaseOrder.findMany({
     where: { tenantId: session.tenantId, status: "ORDERED" },
     include: { supplier: { select: { name: true } }, lines: true },
@@ -224,7 +225,7 @@ export type ReceiveSheet = {
 
 /** Single PO with lines ordered by bin (bin-sort is the putaway path). */
 export async function getReceiveSheet(input: unknown): Promise<ActionResult<ReceiveSheet>> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "WAREHOUSE"]);
   const parsed = IdSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid id" };
 

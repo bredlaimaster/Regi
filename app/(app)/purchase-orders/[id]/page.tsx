@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { requireSession, assertTenant } from "@/lib/auth";
+import { requireRole, assertTenant } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,7 @@ import { PoActions } from "./po-actions";
 import { PartialReceiveForm } from "./partial-receive-form";
 
 export default async function PoDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "WAREHOUSE"]);
   const { id } = await params;
   const po = await prisma.purchaseOrder.findUnique({
     where: { id },

@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { currentFiscalYear } from "@/lib/reports/margin";
 import { getReorderPlanner } from "@/lib/reports/supplier";
 import { buildWorkbook, workbookToBuffer } from "@/lib/reports/xlsx";
 
 export async function GET() {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const fy = currentFiscalYear();
   const rows = await getReorderPlanner(session.tenantId, fy);
 

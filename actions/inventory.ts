@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireSession, assertTenant } from "@/lib/auth";
+import { requireRole, assertTenant } from "@/lib/auth";
 import { applyStockMovement } from "@/lib/inventory";
 import type { ActionResult } from "@/lib/types";
 
@@ -13,7 +13,7 @@ const AdjustSchema = z.object({
 });
 
 export async function adjustStock(input: unknown): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "WAREHOUSE"]);
   const parsed = AdjustSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid" };
 

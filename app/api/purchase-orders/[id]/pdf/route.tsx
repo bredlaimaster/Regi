@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { requireSession, assertTenant } from "@/lib/auth";
+import { requireRole, assertTenant } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { DocPdf, renderPdf } from "@/lib/pdf";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "WAREHOUSE"]);
   const { id } = await params;
   const po = await prisma.purchaseOrder.findUnique({
     where: { id },

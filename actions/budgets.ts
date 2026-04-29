@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import type { ActionResult } from "@/lib/types";
 
 const MONTH_MAP: Record<string, number> = {
@@ -20,7 +20,7 @@ const UploadSchema = z.object({
 export async function uploadBudget(
   input: unknown
 ): Promise<ActionResult<{ inserted: number; skipped: number }>> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const parsed = UploadSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
   const { fiscalYear, tsv } = parsed.data;

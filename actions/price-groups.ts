@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireSession, assertTenant } from "@/lib/auth";
+import { requireRole, assertTenant } from "@/lib/auth";
 import type { ActionResult } from "@/lib/types";
 
 const GroupSchema = z.object({
@@ -16,7 +16,7 @@ const GroupSchema = z.object({
 export async function upsertPriceGroup(
   input: unknown,
 ): Promise<ActionResult<{ id: string }>> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const parsed = GroupSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid price group" };
   const { id, ...data } = parsed.data;
@@ -60,7 +60,7 @@ export async function upsertPriceGroup(
 }
 
 export async function deletePriceGroup(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const existing = await prisma.priceGroup.findUnique({
     where: { id },
     include: { _count: { select: { customers: true, prices: true } } },
@@ -85,7 +85,7 @@ export async function deletePriceGroup(id: string): Promise<ActionResult> {
 }
 
 export async function setDefaultPriceGroup(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const existing = await prisma.priceGroup.findUnique({ where: { id } });
   if (!existing) return { ok: false, error: "Not found" };
   assertTenant(existing.tenantId, session.tenantId);

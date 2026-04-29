@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireSession, assertTenant } from "@/lib/auth";
+import { requireRole, assertTenant } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { ActionResult } from "@/lib/types";
 
@@ -31,7 +31,7 @@ const ProductSchema = z.object({
 });
 
 export async function upsertProduct(input: unknown): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const parsed = ProductSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid", fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]> };
   const { id, ...data } = parsed.data;
@@ -57,7 +57,7 @@ export async function upsertProduct(input: unknown): Promise<ActionResult> {
 }
 
 export async function deleteProduct(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const existing = await prisma.product.findUnique({ where: { id } });
   if (!existing) return { ok: false, error: "Not found" };
   assertTenant(existing.tenantId, session.tenantId);
@@ -84,7 +84,7 @@ const SavePricesSchema = z.object({
  * Dedups by (priceGroupId, minQty) to respect the unique constraint.
  */
 export async function saveProductPrices(input: unknown): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const parsed = SavePricesSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid pricing data" };
   const { productId, prices } = parsed.data;
@@ -139,7 +139,7 @@ const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 /** Upload a product image to Supabase Storage and return the public URL. */
 export async function uploadProductImage(formData: FormData): Promise<ActionResult<{ url: string }>> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const file = formData.get("file") as File | null;
   if (!file) return { ok: false, error: "No file" };
   if (file.size > MAX_IMAGE_SIZE) return { ok: false, error: "File too large (max 5 MB)" };

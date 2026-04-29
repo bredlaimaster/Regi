@@ -1,4 +1,4 @@
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getAllCustomerRollingTrends, getCustomerRollingTrend, rollingMonths } from "@/lib/reports/trends";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,7 @@ export default async function CustomerTrendsPage({
 }: {
   searchParams: Promise<{ customerId?: string; months?: string }>;
 }) {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const sp = await searchParams;
   const nMonths = Math.min(36, Math.max(6, parseInt(sp.months ?? "19")));
   const months = rollingMonths(nMonths);

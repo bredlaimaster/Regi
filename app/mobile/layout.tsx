@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 
 /**
  * Mobile layout. Outside the `(app)` group so we don't inherit the desktop
- * sidebar/topbar. Auth is still enforced via `requireSession()`.
+ * sidebar/topbar. Mobile flows (pick / receive / stocktake) are warehouse
+ * tools — gated to ADMIN + WAREHOUSE.
  */
 export const metadata: Metadata = {
   title: "NZ Inventory — Mobile",
@@ -20,6 +21,6 @@ export const viewport: Viewport = {
 };
 
 export default async function MobileLayout({ children }: { children: React.ReactNode }) {
-  await requireSession(); // redirects to /login if no session cookie
+  await requireRole(["ADMIN", "WAREHOUSE"]);
   return <div className="min-h-screen bg-background text-foreground">{children}</div>;
 }

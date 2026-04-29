@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
-import { requireSession, assertTenant } from "@/lib/auth";
+import { requireRole, assertTenant } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { SupplierDetailTabs } from "@/components/suppliers/supplier-detail-tabs";
 
 export default async function EditSupplier({ params }: { params: Promise<{ id: string }> }) {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const { id } = await params;
 
   const supplier = await prisma.supplier.findUnique({

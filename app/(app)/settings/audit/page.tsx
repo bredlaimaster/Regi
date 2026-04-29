@@ -1,11 +1,11 @@
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatNzDateTime } from "@/lib/utils";
 
 export default async function AuditPage() {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const txs = await prisma.inventoryTransaction.findMany({
     where: { tenantId: session.tenantId },
     include: { product: true },

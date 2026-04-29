@@ -1,9 +1,9 @@
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ProformaForm } from "@/components/forms/proforma-form";
 
 export default async function NewProformaPage() {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const [customers, products, priceGroups] = await Promise.all([
     prisma.customer.findMany({
       where: { tenantId: session.tenantId },

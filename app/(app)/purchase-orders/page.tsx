@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -20,7 +20,7 @@ export default async function PoListPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "WAREHOUSE"]);
   const { page: pageStr } = await searchParams;
   const currentPage = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
 

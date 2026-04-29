@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireSession, assertTenant } from "@/lib/auth";
+import { requireRole, assertTenant } from "@/lib/auth";
 import type { ActionResult } from "@/lib/types";
 
 const ContactSchema = z.object({
@@ -23,7 +23,7 @@ const ContactSchema = z.object({
 });
 
 export async function upsertSupplierContact(input: unknown): Promise<ActionResult<{ id: string }>> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const parsed = ContactSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid contact data" };
   const { id, supplierId, ...data } = parsed.data;
@@ -53,7 +53,7 @@ export async function upsertSupplierContact(input: unknown): Promise<ActionResul
 }
 
 export async function deleteSupplierContact(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const contact = await prisma.supplierContact.findUnique({
     where: { id },
     include: { supplier: true },

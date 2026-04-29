@@ -1,11 +1,11 @@
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { getTesterStock } from "@/lib/reports/inventory";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatNzd } from "@/lib/utils";
 
 export default async function TesterTrackerPage() {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const rows = await getTesterStock(session.tenantId);
 
   const totalValue = rows.reduce((s, r) => s + r.valueNzd, 0);

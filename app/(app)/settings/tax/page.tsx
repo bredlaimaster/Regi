@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +20,7 @@ const INCOME_RULES: TaxRule[]  = ["GST15", "ZERO", "EXEMPT"];
 const EXPENSE_RULES: TaxRule[] = ["GST15", "ZERO", "IMPORT_GST", "EXEMPT"];
 
 export default async function TaxSettingsPage() {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
 
   const [suppliers, customers, conn] = await Promise.all([
     prisma.supplier.findMany({

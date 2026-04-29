@@ -2,14 +2,14 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireSession, assertTenant } from "@/lib/auth";
+import { requireRole, assertTenant } from "@/lib/auth";
 import { formatDocNumber } from "@/lib/utils";
 import type { ActionResult } from "@/lib/types";
 import { PROFORMA_EXPIRY_DAYS } from "@/lib/constants";
 
 /** Create a proforma invoice from a DRAFT or CONFIRMED SO */
 export async function createProforma(soId: string): Promise<ActionResult<{ id: string; pfNumber: string }>> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
 
   const so = await prisma.salesOrder.findUnique({
     where: { id: soId },
@@ -44,7 +44,7 @@ export async function createProforma(soId: string): Promise<ActionResult<{ id: s
 
 /** Create a standalone proforma: builds an SO (DRAFT) + proforma in one step. */
 export async function createStandaloneProforma(input: unknown): Promise<ActionResult<{ id: string; pfNumber: string }>> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
 
   const schema = z.object({
     customerId: z.string().min(1),
@@ -129,7 +129,7 @@ export async function createStandaloneProforma(input: unknown): Promise<ActionRe
 }
 
 export async function deleteProforma(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const pf = await prisma.proformaInvoice.findUnique({ where: { id }, include: { salesOrder: true } });
   if (!pf) return { ok: false, error: "Not found" };
   assertTenant(pf.tenantId, session.tenantId);

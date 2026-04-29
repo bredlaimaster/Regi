@@ -1,4 +1,4 @@
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { currentFiscalYear, getSalesByRep } from "@/lib/reports/margin";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -11,7 +11,7 @@ export default async function RepPerformancePage({
 }: {
   searchParams: Promise<{ fy?: string }>;
 }) {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const sp = await searchParams;
   const fy = sp.fy ? parseInt(sp.fy) : currentFiscalYear();
   const rows = await getSalesByRep(session.tenantId, fy);

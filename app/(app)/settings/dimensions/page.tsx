@@ -1,4 +1,4 @@
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DimensionManager } from "./dimension-manager";
@@ -9,7 +9,7 @@ import {
 } from "@/actions/dimensions";
 
 export default async function DimensionsPage() {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const [brands, channels, territories] = await Promise.all([
     prisma.brand.findMany({ where: { tenantId: session.tenantId }, orderBy: { name: "asc" } }),
     prisma.channel.findMany({ where: { tenantId: session.tenantId }, orderBy: { name: "asc" } }),

@@ -1,9 +1,9 @@
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { toCsv, csvResponse } from "@/lib/csv";
 
 export async function GET() {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const grouped = await prisma.inventoryTransaction.groupBy({
     by: ["productId"],

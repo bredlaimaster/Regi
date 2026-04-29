@@ -1,9 +1,9 @@
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { CustomerDetailTabs } from "@/components/customers/customer-detail-tabs";
 
 export default async function NewCustomerPage() {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
 
   const [channels, territories, salesReps, priceGroups] = await Promise.all([
     prisma.channel.findMany({ where: { tenantId: session.tenantId }, orderBy: { name: "asc" } }),

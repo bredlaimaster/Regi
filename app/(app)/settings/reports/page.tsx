@@ -1,4 +1,4 @@
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -19,7 +19,7 @@ const REPORT_KEYS = [
 ];
 
 export default async function ScheduledReportsPage() {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
 
   const [schedules, lastDeliveries] = await Promise.all([
     prisma.scheduledReport.findMany({

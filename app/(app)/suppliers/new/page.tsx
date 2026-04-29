@@ -1,8 +1,8 @@
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { SupplierDetailTabs } from "@/components/suppliers/supplier-detail-tabs";
 
 export default async function NewSupplierPage() {
-  await requireSession();
+  await requireRole(["ADMIN"]);
 
   return (
     <SupplierDetailTabs

@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
-import { requireSession, assertTenant } from "@/lib/auth";
+import { requireRole, assertTenant } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ProductDetailTabs } from "@/components/products/product-detail-tabs";
 
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const { id } = await params;
   const product = await prisma.product.findUnique({
     where: { id },

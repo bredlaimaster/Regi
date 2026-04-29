@@ -15,28 +15,37 @@ import {
   BookmarkCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { Role } from "@prisma/client";
 
-const NAV = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/products", label: "Products", icon: Package },
-  { href: "/inventory", label: "Inventory", icon: Boxes },
-  { href: "/purchase-orders", label: "Purchase Orders", icon: ClipboardList },
-  { href: "/sales-orders", label: "Sales Orders", icon: ShoppingCart },
-  { href: "/proforma", label: "Proforma Invoices", icon: FileText },
-  { href: "/reservations", label: "Reservations", icon: BookmarkCheck },
-  { href: "/suppliers", label: "Suppliers", icon: Truck },
-  { href: "/customers", label: "Customers", icon: Users },
-  { href: "/reports", label: "Reports", icon: BarChart3 },
-  { href: "/settings", label: "Settings", icon: Settings },
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  roles: Role[];
+};
+
+const NAV: NavItem[] = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["ADMIN", "SALES", "WAREHOUSE"] },
+  { href: "/products", label: "Products", icon: Package, roles: ["ADMIN", "SALES"] },
+  { href: "/inventory", label: "Inventory", icon: Boxes, roles: ["ADMIN", "SALES"] },
+  { href: "/purchase-orders", label: "Purchase Orders", icon: ClipboardList, roles: ["ADMIN", "WAREHOUSE"] },
+  { href: "/sales-orders", label: "Sales Orders", icon: ShoppingCart, roles: ["ADMIN", "SALES"] },
+  { href: "/proforma", label: "Proforma Invoices", icon: FileText, roles: ["ADMIN", "SALES"] },
+  { href: "/reservations", label: "Reservations", icon: BookmarkCheck, roles: ["ADMIN", "SALES"] },
+  { href: "/suppliers", label: "Suppliers", icon: Truck, roles: ["ADMIN"] },
+  { href: "/customers", label: "Customers", icon: Users, roles: ["ADMIN", "SALES"] },
+  { href: "/reports", label: "Reports", icon: BarChart3, roles: ["ADMIN", "SALES"] },
+  { href: "/settings", label: "Settings", icon: Settings, roles: ["ADMIN"] },
 ];
 
-export function Sidebar() {
+export function Sidebar({ role }: { role: Role }) {
   const pathname = usePathname();
+  const items = NAV.filter((item) => item.roles.includes(role));
   return (
     <aside className="hidden md:flex md:w-60 md:flex-col border-r bg-card">
       <div className="h-14 flex items-center px-4 border-b font-semibold text-primary">NZ Inventory</div>
       <nav className="flex-1 p-2 space-y-1">
-        {NAV.map(({ href, label, icon: Icon }) => {
+        {items.map(({ href, label, icon: Icon }) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (
             <Link

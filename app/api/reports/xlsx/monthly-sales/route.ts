@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { currentFiscalYear, getActualsByPeriod, getBudgetsByPeriod } from "@/lib/reports/margin";
 import { buildWorkbook, workbookToBuffer } from "@/lib/reports/xlsx";
 
 export async function GET(req: NextRequest) {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const fy = parseInt(req.nextUrl.searchParams.get("fy") ?? String(currentFiscalYear()));
 
   const [actuals, budgets] = await Promise.all([

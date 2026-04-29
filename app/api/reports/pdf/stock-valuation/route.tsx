@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireSession } from "@/lib/auth";
+import { requireRole } from "@/lib/auth";
 import { getStockOnHand } from "@/lib/reports/inventory";
 import { ReportDocument } from "@/lib/reports/pdf";
 import { renderToBuffer } from "@react-pdf/renderer";
 import React from "react";
 
 export async function GET() {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN"]);
   const rows = await getStockOnHand(session.tenantId);
 
   const totalValue = rows.reduce((s, r) => s + r.valueNzd, 0);

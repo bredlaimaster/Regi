@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireSession, assertTenant } from "@/lib/auth";
+import { requireRole, assertTenant } from "@/lib/auth";
 import type { ActionResult } from "@/lib/types";
 
 const CreateReservationSchema = z.object({
@@ -16,7 +16,7 @@ const CreateReservationSchema = z.object({
 });
 
 export async function createReservation(input: unknown): Promise<ActionResult<{ id: string }>> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const parsed = CreateReservationSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid reservation data" };
 
@@ -43,7 +43,7 @@ export async function createReservation(input: unknown): Promise<ActionResult<{ 
 }
 
 export async function releaseReservation(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const res = await prisma.stockReservation.findUnique({ where: { id } });
   if (!res) return { ok: false, error: "Not found" };
   assertTenant(res.tenantId, session.tenantId);
@@ -59,7 +59,7 @@ export async function releaseReservation(id: string): Promise<ActionResult> {
 }
 
 export async function deleteReservation(id: string): Promise<ActionResult> {
-  const session = await requireSession();
+  const session = await requireRole(["ADMIN", "SALES"]);
   const res = await prisma.stockReservation.findUnique({ where: { id } });
   if (!res) return { ok: false, error: "Not found" };
   assertTenant(res.tenantId, session.tenantId);
