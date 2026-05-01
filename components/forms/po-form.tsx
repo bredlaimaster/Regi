@@ -24,7 +24,7 @@ export function PoForm({
   rates,
   initial,
 }: {
-  suppliers: { id: string; name: string }[];
+  suppliers: { id: string; name: string; currency: string }[];
   products: Product[];
   rates: Rates;
   initial?: {
@@ -98,7 +98,16 @@ export function PoForm({
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="space-y-2 md:col-span-2">
           <Label>Supplier</Label>
-          <Select value={supplierId} onValueChange={setSupplierId}>
+          <Select
+            value={supplierId}
+            onValueChange={(id) => {
+              setSupplierId(id);
+              const sup = suppliers.find((s) => s.id === id);
+              if (sup && (SUPPORTED_CURRENCIES as readonly string[]).includes(sup.currency)) {
+                setCurrency(sup.currency as Currency);
+              }
+            }}
+          >
             <SelectTrigger><SelectValue placeholder="Select supplier" /></SelectTrigger>
             <SelectContent>{suppliers.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
           </Select>
