@@ -104,6 +104,12 @@ const ROUTES_ADMIN_SALES: string[] = [
   "app/api/reports/xlsx/monthly-sales/route.ts",
   "app/api/reports/pdf/proforma/[id]/route.tsx",
 ];
+
+// API routes that gate on requireSession (any authed user) rather than role.
+const ROUTES_REQUIRE_SESSION: string[] = [
+  // Image-serve route — gated by tenant via the image's product, not by role.
+  "app/api/product-images/[id]/route.ts",
+];
 const ROUTES_ADMIN_ONLY: string[] = [
   "app/api/reports/valuation.pdf/route.tsx",
   "app/api/reports/stock-on-hand.csv/route.ts",
@@ -174,6 +180,11 @@ describe("RBAC pin: API routes", () => {
   });
   it.each(ROUTES_ADMIN_ONLY)("ADMIN-only: %s", (path) => {
     expect(readSource(path)).toMatch(requireRoleRegex(["ADMIN"]));
+  });
+  it.each(ROUTES_REQUIRE_SESSION)("requireSession + tenant-scoped: %s", (path) => {
+    const src = readSource(path);
+    expect(src).toMatch(/await\s+requireSession\s*\(\s*\)/);
+    expect(src).toMatch(/assertTenant\(/);
   });
 });
 

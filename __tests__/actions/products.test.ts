@@ -1,17 +1,10 @@
-import { describe, it, expect, vi } from "vitest";
-
-// `@/lib/supabase/admin` constructs a Supabase client at module load time and
-// requires NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY in env. We don't
-// touch Supabase in these schema tests, so stub the module so the import chain
-// doesn't blow up.
-vi.mock("@/lib/supabase/admin", () => ({
-  supabaseAdmin: { storage: {} },
-}));
-
+import { describe, it, expect } from "vitest";
 import {
   ProductSchema,
   GroupPriceSchema,
   SavePricesSchema,
+  ProductImageIdSchema,
+  SetPrimaryImageSchema,
 } from "@/lib/schemas/products";
 
 describe("ProductSchema", () => {
@@ -73,10 +66,18 @@ describe("ProductSchema", () => {
     expect(ProductSchema.safeParse({ ...valid, caseQty: 12 }).success).toBe(true);
   });
 
-  it("imageUrl must be a valid URL when provided", () => {
-    expect(ProductSchema.safeParse({ ...valid, imageUrl: "not a url" }).success).toBe(false);
-    expect(ProductSchema.safeParse({ ...valid, imageUrl: "https://example.com/img.png" }).success).toBe(true);
-    expect(ProductSchema.safeParse({ ...valid, imageUrl: null }).success).toBe(true);
+  it("does not accept imageUrl any more (images live in ProductImage now)", () => {
+    // Field is intentionally absent from the schema. Zod ignores extra keys
+    // by default, so the parse should still succeed but the parsed output
+    // must not contain imageUrl.
+    const r = ProductSchema.safeParse({
+      ...valid,
+      imageUrl: "https://example.com/img.png",
+    });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(("imageUrl" in r.data)).toBe(false);
+    }
   });
 
   it("coerces string numbers", () => {
@@ -136,5 +137,32 @@ describe("SavePricesSchema", () => {
 
   it("requires productId", () => {
     expect(SavePricesSchema.safeParse({ prices: [] }).success).toBe(false);
+  });
+});
+
+describe("ProductImageIdSchema", () => {
+  it("requires non-empty id", () => {
+    expect(ProductImageIdSchema.safeParse({ id: "abc" }).success).toBe(true);
+    expect(ProductImageIdSchema.safeParse({ id: "" }).success).toBe(false);
+    expect(ProductImageIdSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+describe("SetPrimaryImageSchema", () => {
+  it("requires both productId and imageId", () => {
+    expect(
+      SetPrimaryImageSchema.safeParse({ productId: "p", imageId: "i" }).success,
+    ).toBe(true);
+    expect(SetPrimaryImageSchema.safeParse({ productId: "p" }).success).toBe(false);
+    expect(SetPrimaryImageSchema.safeParse({ imageId: "i" }).success).toBe(false);
+  });
+
+  it("rejects empty values", () => {
+    expect(
+      SetPrimaryImageSchema.safeParse({ productId: "", imageId: "i" }).success,
+    ).toBe(false);
+    expect(
+      SetPrimaryImageSchema.safeParse({ productId: "p", imageId: "" }).success,
+    ).toBe(false);
   });
 });

@@ -11,19 +11,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, Plus } from "lucide-react";
-import { upsertProduct, uploadProductImage, deleteProduct, saveProductPrices } from "@/actions/products";
+import { Badge } from "@/components/ui/badge";
+import { Trash2, Plus, Star, Upload, ImageIcon } from "lucide-react";
+import {
+  upsertProduct,
+  deleteProduct,
+  saveProductPrices,
+  addProductImage,
+  deleteProductImage,
+  setPrimaryProductImage,
+} from "@/actions/products";
 
 // ───── Types ─────
 type ProductInitial = {
-  id: string; // empty when creating
+  id: string;
   sku: string;
   name: string;
   description: string | null;
   unit: string;
   sellPriceNzd: number;
   reorderPoint: number;
-  imageUrl: string | null;
   notes: string | null;
   supplierId: string | null;
   brandId: string | null;
@@ -35,6 +42,14 @@ type ProductInitial = {
   binLocation: string | null;
   unitBarcode: string | null;
   caseBarcode: string | null;
+};
+
+type ProductImageMeta = {
+  id: string;
+  filename: string | null;
+  contentType: string;
+  size: number;
+  order: number;
 };
 
 type GroupPriceRow = {
@@ -57,6 +72,11 @@ function toNum(val: unknown): number {
   if (val === null || val === undefined || val === "") return 0;
   return Number(val) || 0;
 }
+function fmtBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 // ───── Main tabs component ─────
 export function ProductDetailTabs({
@@ -65,12 +85,14 @@ export function ProductDetailTabs({
   brands,
   priceGroups,
   existingPrices,
+  images = [],
 }: {
   initial?: ProductInitial;
   suppliers: Supplier[];
   brands: Brand[];
   priceGroups: PriceGroup[];
   existingPrices?: { priceGroupId: string; unitPrice: number; minQty: number }[];
+  images?: ProductImageMeta[];
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -104,10 +126,8 @@ export function ProductDetailTabs({
         }))
       : []
   );
-  const groupById = Object.fromEntries(priceGroups.map((g) => [g.id, g.name]));
 
   function addPriceRow() {
-    // default to first group not yet used at qty 1, else first group
     const usedAtOne = new Set(priceRows.filter((r) => r.minQty === "1").map((r) => r.priceGroupId));
     const nextGroup = priceGroups.find((g) => !usedAtOne.has(g.id))?.id ?? priceGroups[0]?.id ?? "";
     setPriceRows((xs) => [...xs, { priceGroupId: nextGroup, unitPrice: "", minQty: "1" }]);
@@ -119,18 +139,68 @@ export function ProductDetailTabs({
     setPriceRows((xs) => xs.filter((_, i) => i !== idx));
   }
 
+  // ───── Image tab handlers ─────
+  const [uploading, setUploading] = useState(false);
+
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const fd = new FormData();
-    fd.append("file", file);
-    const res = await uploadProductImage(fd);
-    if (!res.ok) {
-      toast.error(res.error);
-      return;
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = ""; // allow re-selecting the same file
+    if (files.length === 0 || !initial?.id) return;
+
+    setUploading(true);
+    try {
+      // Sequential uploads: simpler error handling, and each row is small.
+      let okCount = 0;
+      let firstError: string | null = null;
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append("productId", initial.id);
+        fd.append("file", file);
+        const res = await addProductImage(fd);
+        if (!res.ok) {
+          if (!firstError) firstError = `${file.name}: ${res.error}`;
+          continue;
+        }
+        okCount += 1;
+      }
+      if (okCount > 0) {
+        toast.success(
+          okCount === 1
+            ? "Image uploaded"
+            : `Uploaded ${okCount} images`,
+        );
+      }
+      if (firstError) toast.error(firstError);
+      router.refresh();
+    } finally {
+      setUploading(false);
     }
-    setField("imageUrl", res.data.url);
-    toast.success("Image uploaded");
+  }
+
+  function onDeleteImage(id: string) {
+    if (!confirm("Delete this image?")) return;
+    start(async () => {
+      const res = await deleteProductImage({ id });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success("Image deleted");
+      router.refresh();
+    });
+  }
+
+  function onSetPrimary(imageId: string) {
+    if (!initial?.id) return;
+    start(async () => {
+      const res = await setPrimaryProductImage({ productId: initial.id, imageId });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success("Primary image updated");
+      router.refresh();
+    });
   }
 
   const saveAll = () =>
@@ -159,11 +229,6 @@ export function ProductDetailTabs({
         return;
       }
 
-      // For existing products, also save the pricing rows.
-      // For new products, we don't have an id yet — upsertProduct currently
-      // returns ok without the new id, so staged prices will have to be
-      // saved after navigating back into the editor. We still create the
-      // product successfully. TODO: return id from upsertProduct.
       if (!isNew && initial?.id) {
         const validPrices = priceRows
           .filter((r) => r.priceGroupId && r.unitPrice && parseFloat(r.unitPrice) > 0)
@@ -200,7 +265,7 @@ export function ProductDetailTabs({
           </h1>
         </div>
         <div className="flex gap-2">
-          <Button onClick={saveAll} disabled={pending}>
+          <Button onClick={saveAll} disabled={pending || uploading}>
             {pending ? "Saving..." : (isNew ? "Create Product" : "Save")}
           </Button>
         </div>
@@ -210,7 +275,9 @@ export function ProductDetailTabs({
         <TabsList>
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="pricing">Pricing{priceRows.length > 0 ? ` (${priceRows.length})` : ""}</TabsTrigger>
-          <TabsTrigger value="image">Image</TabsTrigger>
+          <TabsTrigger value="images">
+            Images{images.length > 0 ? ` (${images.length})` : ""}
+          </TabsTrigger>
         </TabsList>
 
         {/* ───── DETAILS ───── */}
@@ -346,7 +413,7 @@ export function ProductDetailTabs({
                 </div>
               </div>
               <div className="rounded-md border p-3 text-xs text-muted-foreground bg-muted/30">
-                Set the base sell price and per-group custom prices in the <b>Pricing</b> tab. Upload a product photo in the <b>Image</b> tab.
+                Set the base sell price and per-group custom prices in the <b>Pricing</b> tab. Upload product photos in the <b>Images</b> tab.
               </div>
             </div>
           </div>
@@ -527,23 +594,116 @@ export function ProductDetailTabs({
           </div>
         </TabsContent>
 
-        {/* ───── IMAGE ───── */}
-        <TabsContent value="image">
-          <div className="max-w-xl space-y-4">
-            <div className="space-y-2">
-              <Label>Product image</Label>
-              <Input type="file" accept="image/*" onChange={onUpload} />
-              <p className="text-xs text-muted-foreground">JPEG, PNG, WebP, or GIF — max 5 MB.</p>
-            </div>
-            {f.imageUrl ? (
-              <div className="rounded-md border p-3 inline-block">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={f.imageUrl} alt="" className="h-48 w-48 rounded object-cover" />
+        {/* ───── IMAGES ───── */}
+        <TabsContent value="images">
+          <div className="max-w-4xl space-y-4">
+            {isNew ? (
+              <div className="rounded-md border border-dashed p-8 text-sm text-muted-foreground text-center">
+                <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                Save the product first, then come back here to upload images.
               </div>
             ) : (
-              <div className="rounded-md border border-dashed p-6 text-sm text-muted-foreground text-center">
-                No image uploaded yet.
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="product-image-input">Add images</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="product-image-input"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      multiple
+                      onChange={onUpload}
+                      disabled={uploading || pending}
+                    />
+                    {uploading && (
+                      <span className="text-sm text-muted-foreground">
+                        <Upload className="h-4 w-4 inline animate-pulse" /> Uploading…
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    JPEG, PNG, WebP, or GIF — max 5 MB each. Pick multiple files at
+                    once to upload them in one go. The first image is the primary
+                    one shown in lists.
+                  </p>
+                </div>
+
+                {images.length === 0 ? (
+                  <div className="rounded-md border border-dashed p-8 text-sm text-muted-foreground text-center">
+                    <ImageIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    No images yet. Drop one in above.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {images.map((img, idx) => {
+                      const isPrimary = idx === 0;
+                      return (
+                        <div
+                          key={img.id}
+                          className="rounded-md border overflow-hidden bg-card flex flex-col"
+                        >
+                          <div className="relative aspect-square bg-muted/30">
+                            {/* Plain <img> — Next/Image isn't worth the same-origin */}
+                            {/* dance for one-tenant low-traffic catalogue. */}
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={`/api/product-images/${img.id}`}
+                              alt={img.filename ?? "Product image"}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                            {isPrimary && (
+                              <Badge
+                                variant="success"
+                                className="absolute top-2 left-2 text-[10px] px-1.5 py-0.5"
+                              >
+                                <Star className="h-3 w-3 mr-1 fill-current" /> Primary
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="p-2 space-y-1">
+                            <div
+                              className="text-xs truncate"
+                              title={img.filename ?? ""}
+                            >
+                              {img.filename ?? "(no filename)"}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground">
+                              {fmtBytes(img.size)}
+                            </div>
+                            <div className="flex gap-1 pt-1">
+                              {!isPrimary && (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs flex-1"
+                                  onClick={() => onSetPrimary(img.id)}
+                                  disabled={pending || uploading}
+                                  title="Use as primary image"
+                                >
+                                  <Star className="h-3 w-3 mr-1" /> Primary
+                                </Button>
+                              )}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => onDeleteImage(img.id)}
+                                disabled={pending || uploading}
+                                title="Delete image"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </TabsContent>

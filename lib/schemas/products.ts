@@ -13,7 +13,9 @@ export const ProductSchema = z.object({
   unit: z.string().default("EA"),
   sellPriceNzd: z.coerce.number().nonnegative(),
   reorderPoint: z.coerce.number().int().nonnegative().default(0),
-  imageUrl: z.string().url().optional().nullable(),
+  // imageUrl deprecated — product images now live in the ProductImage table
+  // and are served from /api/product-images/[id]. The column stays for now to
+  // avoid a destructive migration, but the form no longer reads or writes it.
   notes: z.string().optional().nullable(),
   supplierId: z.string().optional().nullable(),
   // Phase A
@@ -38,4 +40,15 @@ export const GroupPriceSchema = z.object({
 export const SavePricesSchema = z.object({
   productId: z.string(),
   prices: z.array(GroupPriceSchema),
+});
+
+// ─── Product images ───────────────────────────────────────────────────────────
+
+export const ProductImageIdSchema = z.object({
+  id: z.string().min(1),
+});
+
+export const SetPrimaryImageSchema = z.object({
+  productId: z.string().min(1),
+  imageId: z.string().min(1),
 });

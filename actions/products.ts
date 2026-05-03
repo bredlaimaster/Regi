@@ -1,10 +1,13 @@
 "use server";
-import { z } from "zod";
-import { ProductSchema, GroupPriceSchema, SavePricesSchema } from "@/lib/schemas/products";
+import {
+  ProductSchema,
+  SavePricesSchema,
+  ProductImageIdSchema,
+  SetPrimaryImageSchema,
+} from "@/lib/schemas/products";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole, assertTenant } from "@/lib/auth";
-import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { ActionResult } from "@/lib/types";
 
 export async function upsertProduct(input: unknown): Promise<ActionResult> {
@@ -97,28 +100,132 @@ export async function saveProductPrices(input: unknown): Promise<ActionResult> {
   return { ok: true, data: null };
 }
 
-// ─── Image upload ─────────────────────────────────────────────────────────────
+// ─── Product images ───────────────────────────────────────────────────────────
+//
+// Images are stored in the `ProductImage` Postgres table (bytes column +
+// content-type) rather than in an external object store. This makes the
+// system self-contained — no Supabase / S3 setup, no extra credentials,
+// works identically in dev and prod.
+//
+// The previous Supabase Storage path was broken in production (sst.config.ts
+// shipped stub URLs, see commit history) and only saved the URL into local
+// component state, never to the DB. This rewrite fixes both: each upload
+// hits the DB immediately, and the URL pattern is `/api/product-images/[id]`
+// served by the route at the same path.
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
-const ALLOWED_IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "gif"]);
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
 
-/** Upload a product image to Supabase Storage and return the public URL. */
-export async function uploadProductImage(formData: FormData): Promise<ActionResult<{ url: string }>> {
+/**
+ * Append an image to a product. The product must already exist (i.e. for new
+ * products, save the form first).
+ */
+export async function addProductImage(
+  formData: FormData,
+): Promise<ActionResult<{ id: string }>> {
   const session = await requireRole(["ADMIN", "SALES"]);
-  const file = formData.get("file") as File | null;
-  if (!file) return { ok: false, error: "No file" };
+  const productId = formData.get("productId");
+  const file = formData.get("file");
+
+  if (typeof productId !== "string" || !productId) {
+    return { ok: false, error: "Save the product first, then upload images." };
+  }
+  if (!(file instanceof File)) return { ok: false, error: "No file" };
   if (file.size > MAX_IMAGE_SIZE) return { ok: false, error: "File too large (max 5 MB)" };
-  if (!ALLOWED_IMAGE_TYPES.has(file.type)) return { ok: false, error: "Only JPEG, PNG, WebP, and GIF images are allowed" };
-  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-  if (!ALLOWED_IMAGE_EXTENSIONS.has(ext)) return { ok: false, error: "Invalid file extension" };
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const path = `${session.tenantId}/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabaseAdmin.storage.from("product-images").upload(path, bytes, {
-    contentType: file.type,
-    upsert: false,
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    return { ok: false, error: "Only JPEG, PNG, WebP, or GIF images are allowed." };
+  }
+
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { tenantId: true },
   });
-  if (error) return { ok: false, error: error.message };
-  const { data } = supabaseAdmin.storage.from("product-images").getPublicUrl(path);
-  return { ok: true, data: { url: data.publicUrl } };
+  if (!product) return { ok: false, error: "Product not found" };
+  assertTenant(product.tenantId, session.tenantId);
+
+  const bytes = Buffer.from(await file.arrayBuffer());
+
+  // Append at the end of the existing order. First-uploaded image becomes
+  // the primary by default.
+  const last = await prisma.productImage.findFirst({
+    where: { productId },
+    orderBy: { order: "desc" },
+    select: { order: true },
+  });
+  const nextOrder = (last?.order ?? -1) + 1;
+
+  const created = await prisma.productImage.create({
+    data: {
+      productId,
+      bytes,
+      contentType: file.type,
+      filename: file.name || null,
+      size: file.size,
+      order: nextOrder,
+    },
+    select: { id: true },
+  });
+
+  revalidatePath(`/products/${productId}`);
+  revalidatePath("/products");
+  return { ok: true, data: { id: created.id } };
+}
+
+/** Delete an image. The remaining images keep their relative order. */
+export async function deleteProductImage(input: unknown): Promise<ActionResult> {
+  const session = await requireRole(["ADMIN", "SALES"]);
+  const parsed = ProductImageIdSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid input" };
+
+  const img = await prisma.productImage.findUnique({
+    where: { id: parsed.data.id },
+    select: {
+      id: true,
+      productId: true,
+      product: { select: { tenantId: true } },
+    },
+  });
+  if (!img) return { ok: false, error: "Not found" };
+  assertTenant(img.product.tenantId, session.tenantId);
+
+  await prisma.productImage.delete({ where: { id: img.id } });
+  revalidatePath(`/products/${img.productId}`);
+  revalidatePath("/products");
+  return { ok: true, data: null };
+}
+
+/**
+ * Move an image to position 0 (primary) and renumber the rest 1..N preserving
+ * their previous relative order.
+ */
+export async function setPrimaryProductImage(input: unknown): Promise<ActionResult> {
+  const session = await requireRole(["ADMIN", "SALES"]);
+  const parsed = SetPrimaryImageSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid input" };
+  const { productId, imageId } = parsed.data;
+
+  const img = await prisma.productImage.findUnique({
+    where: { id: imageId },
+    select: { productId: true, product: { select: { tenantId: true } } },
+  });
+  if (!img) return { ok: false, error: "Not found" };
+  if (img.productId !== productId) return { ok: false, error: "Image does not belong to this product" };
+  assertTenant(img.product.tenantId, session.tenantId);
+
+  await prisma.$transaction(async (tx) => {
+    const all = await tx.productImage.findMany({
+      where: { productId },
+      orderBy: { order: "asc" },
+      select: { id: true },
+    });
+    let i = 1;
+    for (const row of all) {
+      const newOrder = row.id === imageId ? 0 : i++;
+      await tx.productImage.update({ where: { id: row.id }, data: { order: newOrder } });
+    }
+  });
+
+  revalidatePath(`/products/${productId}`);
+  revalidatePath("/products");
+  return { ok: true, data: null };
 }

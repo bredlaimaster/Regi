@@ -141,6 +141,7 @@ model Product {
   batches       Batch[]
   reservations  StockReservation[]
   prices        ProductPrice[]
+  images        ProductImage[]
 
   @@index([tenantId])
   @@index([tenantId, active])
@@ -738,4 +739,26 @@ model BugReport {
   updatedAt     DateTime  @updatedAt
 
   @@index([tenantId, solved, createdAt])
+}
+
+// ─── Product images ───────────────────────────────────────────────────────────
+
+/// Multi-image support for products. Bytes stored directly in Postgres so
+/// we don't need an external object store (Supabase, S3, etc.) for what is
+/// a small, single-tenant catalogue.
+///
+/// Display order is determined by `order` ascending. The lowest-order image
+/// is the "primary" one shown in lists and detail headers.
+model ProductImage {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  bytes       Bytes
+  contentType String                 // image/jpeg | image/png | image/webp | image/gif
+  filename    String?                // original filename for download / display
+  size        Int                    // bytes; useful for UI display + caps
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([productId, order])
 }

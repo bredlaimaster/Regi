@@ -8,7 +8,13 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const product = await prisma.product.findUnique({
     where: { id },
-    include: { prices: { orderBy: [{ priceGroupId: "asc" }, { minQty: "asc" }] } },
+    include: {
+      prices: { orderBy: [{ priceGroupId: "asc" }, { minQty: "asc" }] },
+      images: {
+        orderBy: { order: "asc" },
+        select: { id: true, filename: true, contentType: true, size: true, order: true },
+      },
+    },
   });
   if (!product) notFound();
   assertTenant(product.tenantId, session.tenantId);
@@ -34,7 +40,6 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         unit: product.unit,
         sellPriceNzd: Number(product.sellPriceNzd),
         reorderPoint: product.reorderPoint,
-        imageUrl: product.imageUrl,
         notes: product.notes,
         supplierId: product.supplierId,
         brandId: product.brandId,
@@ -47,6 +52,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         unitBarcode: product.unitBarcode,
         caseBarcode: product.caseBarcode,
       }}
+      images={product.images}
       existingPrices={product.prices.map((p) => ({
         priceGroupId: p.priceGroupId,
         unitPrice: Number(p.unitPrice),
