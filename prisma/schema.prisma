@@ -35,6 +35,7 @@ model Tenant {
   stockReservations StockReservation[]
   creditNotes      CreditNote[]
   priceGroups      PriceGroup[]
+  bugReports       BugReport[]
 }
 
 model User {
@@ -717,4 +718,24 @@ model ExchangeRate {
 
   @@id([date, currency])
   @@index([currency, date])
+}
+
+// ─── Support / bug tracker (Settings → Support) ───────────────────────────────
+
+/// Lightweight in-app bug tracker. Used by the Settings → Support tab.
+/// Multi-tenant by design even though we have one tenant in practice.
+model BugReport {
+  id            String    @id @default(cuid())
+  tenantId      String
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  description   String                                     // free-form, can be long
+  affectedAreas String[]                                   // canonical keys from lib/bug-areas.ts
+  driveLink     String?                                    // optional Google Drive folder/file URL
+  reporter      String?                                    // free-text, e.g. "son", optional
+  solved        Boolean   @default(false)
+  resolvedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([tenantId, solved, createdAt])
 }

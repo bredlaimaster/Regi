@@ -11,6 +11,7 @@ const SETTINGS_LINKS = [
   { href: "/settings/reports", title: "Scheduled Reports", desc: "Automated email delivery for all reports." },
   { href: "/settings/quickbooks", title: "QuickBooks Online", desc: "Connect and monitor sync jobs." },
   { href: "/settings/audit", title: "Audit Trail", desc: "Every stock movement, ever." },
+  { href: "/settings/support", title: "Support", desc: "Track bugs, what's solved, and where the supporting media lives." },
 ];
 
 export default async function SettingsPage() {

@@ -85,6 +85,7 @@ const PAGES_ADMIN_ONLY: string[] = [
   "app/(app)/settings/users/page.tsx",
   "app/(app)/settings/quickbooks/page.tsx",
   "app/(app)/settings/price-groups/page.tsx",
+  "app/(app)/settings/support/page.tsx",
   "app/(app)/reports/container-planning/page.tsx",
   "app/(app)/reports/expiry-tracker/page.tsx",
   "app/(app)/reports/overstock/page.tsx",
