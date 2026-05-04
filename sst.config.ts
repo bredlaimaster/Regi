@@ -105,6 +105,10 @@ export default $config({
         APP_URL: "http://WebLoadBalancer-tbaambtx-482012902.ap-southeast-2.elb.amazonaws.com",
         CRON_SECRET: "change-me-in-production",
         ADMIN_EMAIL: "owner@regionalhealth.co.nz",
+        // External bug-report intake (Playwright MCP, etc.). Rotate by
+        // regenerating (`openssl rand -hex 32`) and re-deploying via SST.
+        // Mirror in `.env` for local dev.
+        BUG_REPORT_API_TOKEN: "249e059a6609dd27cf7dd8d86dcb258a6f8ac8af71cfddbe927957f580724ed2",
       },
     });
 

@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Testing Regi with Playwright MCP — Visual Guide</title>
+<style>
+  :root {
+    --indigo:   #4338ca;
+    --indigo-2: #3730a3;
+    --purple:   #9333ea;
+    --pink:     #db2777;
+    --amber:    #f59e0b;
+    --emerald:  #059669;
+    --rose:     #e11d48;
+
+    --bg:       #fafafa;
+    --card:     #ffffff;
+    --ink:      #0f172a;
+    --muted:    #475569;
+    --soft:     #94a3b8;
+    --line:     #e2e8f0;
+    --tint:     #f1f5f9;
+
+    --code-bg:  #0f172a;
+    --code-fg:  #e2e8f0;
+    --code-key: #c4b5fd;
+    --code-str: #fbbf24;
+    --code-com: #64748b;
+    --code-fn:  #7dd3fc;
+
+    --radius:   16px;
+    --shadow:   0 1px 2px rgba(15,23,42,.04), 0 8px 24px rgba(15,23,42,.06);
+
+    --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ───── Hero ───── */
+  .hero {
+    background:
+      radial-gradient(800px 400px at 20% 0%, rgba(255,255,255,.18), transparent 60%),
+      radial-gradient(600px 300px at 90% 100%, rgba(245,158,11,.30), transparent 60%),
+      linear-gradient(135deg, var(--indigo) 0%, var(--purple) 50%, var(--pink) 100%);
+    color: #fff;
+    padding: 88px 24px 72px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,.06) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,.06) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask: linear-gradient(180deg, black 0%, black 60%, transparent 100%);
+    pointer-events: none;
+  }
+  .hero-inner {
+    max-width: 880px;
+    margin: 0 auto;
+    position: relative;
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: rgba(255,255,255,.14);
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    backdrop-filter: blur(8px);
+  }
+  h1 {
+    font-size: 56px;
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -.02em;
+    margin: 18px 0 12px;
+  }
+  .lede {
+    font-size: 20px;
+    color: rgba(255,255,255,.88);
+    max-width: 720px;
+    margin: 0 0 36px;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    max-width: 600px;
+  }
+  .stat {
+    background: rgba(255,255,255,.10);
+    border: 1px solid rgba(255,255,255,.18);
+    backdrop-filter: blur(8px);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .stat .num { font-size: 26px; font-weight: 800; line-height: 1; }
+  .stat .lbl { font-size: 12px; color: rgba(255,255,255,.78); margin-top: 6px; }
+
+  /* ───── Page layout ───── */
+  main {
+    max-width: 880px;
+    margin: -36px auto 0;
+    padding: 0 24px 96px;
+    position: relative;
+    z-index: 1;
+  }
+  section {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 36px 36px;
+    margin-bottom: 28px;
+  }
+  section h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 8px;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+  }
+  section h2 .icon {
+    width: 28px; height: 28px;
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    border-radius: 8px;
+    background: var(--tint);
+    color: var(--indigo);
+    flex-shrink: 0;
+  }
+  section h2 .icon svg { width: 18px; height: 18px; }
+  section .blurb {
+    color: var(--muted);
+    margin: 0 0 22px;
+    font-size: 15.5px;
+  }
+  section h3 {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 28px 0 8px;
+  }
+
+  p { margin: 0 0 14px; }
+  p, li { color: var(--ink); }
+  ul, ol { padding-left: 22px; margin: 8px 0 14px; }
+  li { margin-bottom: 6px; }
+  a { color: var(--indigo); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code {
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    background: var(--tint);
+    padding: 2px 6px;
+    border-radius: 5px;
+    color: var(--ink);
+  }
+
+  /* ───── Code blocks ───── */
+  .code {
+    position: relative;
+    background: var(--code-bg);
+    color: var(--code-fg);
+    border-radius: 12px;
+    padding: 18px 18px 18px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-x: auto;
+    margin: 8px 0 14px;
+  }
+  .code pre { margin: 0; white-space: pre; }
+  .code .k { color: var(--code-key); }
+  .code .s { color: var(--code-str); }
+  .code .c { color: var(--code-com); font-style: italic; }
+  .code .fn { color: var(--code-fn); }
+  .code .copy {
+    position: absolute; top: 10px; right: 10px;
+    padding: 5px 10px;
+    font-size: 11px; font-weight: 600;
+    color: rgba(255,255,255,.7);
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: var(--font-sans);
+  }
+  .code .copy:hover { color: #fff; background: rgba(255,255,255,.12); }
+  .code .copy.copied { color: #34d399; border-color: #34d399; }
+
+  /* ───── Stepper ───── */
+  .step {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 18px;
+    align-items: flex-start;
+    padding: 22px 0;
+    border-top: 1px solid var(--line);
+  }
+  .step:first-of-type { border-top: 0; padding-top: 0; }
+  .step-num {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800;
+    font-size: 18px;
+    color: white;
+    background: linear-gradient(135deg, var(--indigo), var(--purple));
+    box-shadow: 0 6px 16px rgba(67, 56, 202, .25);
+  }
+  .step-body h3 { margin-top: 0; }
+
+  /* ───── Two-col compare ───── */
+  .cmp {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 8px 0 4px;
+  }
+  .cmp-card {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px;
+    background: var(--card);
+  }
+  .cmp-card .hdr {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 6px;
+    font-weight: 700; font-size: 15px;
+  }
+  .cmp-card .hdr .pill {
+    font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border-radius: 999px; letter-spacing: .05em; text-transform: uppercase;
+  }
+  .cmp-api .hdr .pill { background: #ede9fe; color: #6d28d9; }
+  .cmp-ui  .hdr .pill { background: #dcfce7; color: #15803d; }
+  .cmp-card p { font-size: 14px; color: var(--muted); margin: 0; }
+  .cmp-card ul { margin-top: 10px; }
+  .cmp-card li { font-size: 13px; color: var(--muted); }
+
+  /* ───── Architecture diagram ───── */
+  .arch {
+    background: linear-gradient(135deg, #f5f3ff, #fef3c7 200%);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 4px 0 8px;
+  }
+  .arch svg { width: 100%; height: auto; max-height: 360px; display: block; }
+
+  /* ───── Tables ───── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 14px;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  th {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    color: var(--muted);
+    text-transform: uppercase;
+    background: var(--tint);
+  }
+  tbody tr:hover { background: rgba(67, 56, 202, .03); }
+  td code { font-size: 12.5px; }
+
+  /* ───── Callouts ───── */
+  .callout {
+    display: flex; gap: 14px;
+    padding: 16px 18px;
+    border-radius: 10px;
+    border-left: 4px solid;
+    margin: 10px 0 14px;
+    font-size: 14px;
+  }
+  .callout .icon { flex-shrink: 0; margin-top: 2px; }
+  .callout.tip      { background: #ecfdf5; border-color: var(--emerald); }
+  .callout.tip .icon    { color: var(--emerald); }
+  .callout.warn     { background: #fffbeb; border-color: var(--amber); }
+  .callout.warn .icon   { color: var(--amber); }
+  .callout.danger   { background: #fef2f2; border-color: var(--rose); }
+  .callout.danger .icon { color: var(--rose); }
+  .callout p { margin: 0; color: #1e293b; }
+
+  /* ───── Footer ───── */
+  footer {
+    text-align: center;
+    color: var(--soft);
+    font-size: 13px;
+    padding: 36px 24px;
+    border-top: 1px solid var(--line);
+    background: var(--card);
+  }
+  footer a { color: var(--muted); }
+
+  /* ───── Responsive ───── */
+  @media (max-width: 720px) {
+    h1 { font-size: 36px; }
+    .lede { font-size: 17px; }
+    .hero { padding: 56px 20px 56px; }
+    main { padding: 0 16px 64px; }
+    section { padding: 24px 22px; }
+    .stats { grid-template-columns: 1fr; }
+    .cmp { grid-template-columns: 1fr; }
+    .step { grid-template-columns: 44px 1fr; gap: 14px; }
+    .step-num { width: 36px; height: 36px; font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ─────────────────────── HERO ─────────────────────── -->
+<header class="hero">
+  <div class="hero-inner">
+    <span class="eyebrow">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c2.39 0 4.68.94 6.36 2.64"/></svg>
+      Regi · QA setup
+    </span>
+    <h1>Test Regi the way<br>your team uses it.</h1>
+    <p class="lede">
+      Drive a real browser through real flows with Playwright MCP, and pipe
+      every defect straight into the Settings → Support tracker — by API, by
+      UI, or both. No flaky scripts. No bug spreadsheets.
+    </p>
+    <div class="stats">
+      <div class="stat">
+        <div class="num">2</div>
+        <div class="lbl">paths to log a bug</div>
+      </div>
+      <div class="stat">
+        <div class="num">15</div>
+        <div class="lbl">canonical area tags</div>
+      </div>
+      <div class="stat">
+        <div class="num">~5 min</div>
+        <div class="lbl">to first auto-logged bug</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- ─────────────── 1. Why this matters ─────────────── -->
+<section>
+  <h2>
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></span>
+    Why this exists
+  </h2>
+  <p class="blurb">
+    Three problems this system solves at once:
+  </p>
+  <ol>
+    <li><b>Manual testing forgets things.</b> Playwright MCP runs through any flow you describe, every time, the same way.</li>
+    <li><b>Bug reports leak into Slack, sticky notes, and screenshots in folders.</b> Auto-logging puts them in the same in-app tracker the team already opens to triage.</li>
+    <li><b>Test scripts rot.</b> There aren't any to maintain — Claude reads your prompt and drives the browser. Re-prompt to refine; archive prompts that proved their worth.</li>
+  </ol>
+
+  <div class="callout tip">
+    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 12 2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg></span>
+    <p><b>Already in production.</b> The bug-report API, the bearer token, and the Settings → Support tab are deployed to the prod ALB. You can use this guide right now.</p>
+  </div>
+</section>
+
+<!-- ─────────────── 2. Architecture ─────────────── -->
+<section>
+  <h2>
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg></span>
+    How it fits together
+  </h2>
+  <p class="blurb">
+    Claude Code drives a Chromium browser through Playwright MCP. When it
+    notices something broken, it either POSTs to the bug-report API
+    (token-gated) or fills in the Settings → Support form on screen.
+  </p>
+
+  <div class="arch">
+    <svg viewBox="0 0 800 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="System diagram">
+      <defs>
+        <linearGradient id="grad-claude" x1="0" x2="1">
+          <stop offset="0" stop-color="#4338ca"/>
+          <stop offset="1" stop-color="#9333ea"/>
+        </linearGradient>
+        <linearGradient id="grad-app" x1="0" x2="1">
+          <stop offset="0" stop-color="#059669"/>
+          <stop offset="1" stop-color="#0891b2"/>
+        </linearGradient>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+        </marker>
+      </defs>
+
+      <!-- Claude Code box -->
+      <rect x="40" y="40" rx="14" ry="14" width="220" height="80" fill="url(#grad-claude)"/>
+      <text x="150" y="76" font-family="Inter, system-ui" font-weight="700" font-size="18" fill="white" text-anchor="middle">Claude Code</text>
+      <text x="150" y="96" font-family="Inter, system-ui" font-weight="500" font-size="12" fill="rgba(255,255,255,.85)" text-anchor="middle">+ Playwright MCP</text>
+
+      <!-- Browser box -->
+      <rect x="540" y="40" rx="14" ry="14" width="220" height="80" fill="white" stroke="#cbd5e1" stroke-width="1.5"/>
+      <text x="650" y="76" font-family="Inter, system-ui" font-weight="700" font-size="18" fill="#0f172a" text-anchor="middle">Chromium</text>
+      <text x="650" y="96" font-family="Inter, system-ui" font-weight="500" font-size="12" fill="#64748b" text-anchor="middle">click · type · screenshot</text>
+
+      <!-- Arrow Claude → Browser -->
+      <line x1="265" y1="80" x2="535" y2="80" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+      <text x="400" y="70" font-family="JetBrains Mono, monospace" font-size="12" fill="#475569" text-anchor="middle">browser_*</text>
+
+      <!-- Regi App box -->
+      <rect x="180" y="200" rx="14" ry="14" width="440" height="100" fill="url(#grad-app)"/>
+      <text x="400" y="234" font-family="Inter, system-ui" font-weight="700" font-size="18" fill="white" text-anchor="middle">Regi (prod or local)</text>
+
+      <rect x="220" y="248" rx="8" ry="8" width="170" height="36" fill="rgba(255,255,255,.16)"/>
+      <text x="305" y="266" font-family="JetBrains Mono, monospace" font-size="12" fill="white" text-anchor="middle">/api/bug-reports</text>
+      <text x="305" y="280" font-family="Inter, system-ui" font-size="10" fill="rgba(255,255,255,.85)" text-anchor="middle">bearer token</text>
+
+      <rect x="410" y="248" rx="8" ry="8" width="170" height="36" fill="rgba(255,255,255,.16)"/>
+      <text x="495" y="266" font-family="JetBrains Mono, monospace" font-size="12" fill="white" text-anchor="middle">/settings/support</text>
+      <text x="495" y="280" font-family="Inter, system-ui" font-size="10" fill="rgba(255,255,255,.85)" text-anchor="middle">form UI</text>
+
+      <!-- Claude → API -->
+      <line x1="150" y1="125" x2="305" y2="245" stroke="#4338ca" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arrow)"/>
+      <text x="200" y="180" font-family="Inter, system-ui" font-size="11" font-style="italic" fill="#4338ca" text-anchor="middle">POST</text>
+
+      <!-- Browser → form -->
+      <line x1="650" y1="125" x2="495" y2="245" stroke="#059669" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arrow)"/>
+      <text x="600" y="180" font-family="Inter, system-ui" font-size="11" font-style="italic" fill="#059669" text-anchor="middle">submit</text>
+    </svg>
+  </div>
+</section>
+
+<!-- ─────────────── 3. Two ways to log ─────────────── -->
+<section>
+  <h2>
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M5 12h14"/></svg></span>
+    Two paths to log a bug
+  </h2>
+  <p class="blurb">Use either or both.</p>
+  <div class="cmp">
+    <div class="cmp-card cmp-api">
+      <div class="hdr">
+        <span class="pill">Path A · API</span>
+      </div>
+      <p><b>Fast & machine-friendly.</b></p>
+      <ul>
+        <li>POST JSON to <code>/api/bug-reports</code></li>
+        <li><code>Authorization: Bearer &lt;token&gt;</code></li>
+        <li>No browser session needed</li>
+        <li>Best for assertions & batch runs</li>
+      </ul>
+    </div>
+    <div class="cmp-card cmp-ui">
+      <div class="hdr">
+        <span class="pill">Path B · UI</span>
+      </div>
+      <p><b>Dogfoods the same form humans use.</b></p>
+      <ul>
+        <li>Drive Playwright to <code>/settings/support</code></li>
+        <li>Open the dialog, fill, submit</li>
+        <li>Verifies the UI itself works</li>
+        <li>Slower, but a great smoke test</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── 4. Steps ─────────────── -->
+<section>
+  <h2>
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
+    Get going in four steps
+  </h2>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h3>Install Playwright MCP into Claude Code</h3>
+      <p>One command — registers the server in <code>~/.claude.json</code>.</p>
+      <div class="code"><button class="copy" data-copy>Copy</button><pre><span class="fn">claude</span> mcp add playwright -- npx <span class="s">@playwright/mcp@latest</span></pre></div>
+      <p>Restart any active Claude session. Verify with <code>/mcp</code> — <code>playwright</code> should appear, listing tools like <code>browser_navigate</code>, <code>browser_click</code>, <code>browser_type</code>, <code>browser_snapshot</code>.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h3>Make the bug-report token reachable</h3>
+      <p>The token is already in <code>.env</code> locally and in the prod ECS task definition. Export it into your shell so commands don't have to hard-code it:</p>
+      <div class="code"><button class="copy" data-copy>Copy</button><pre><span class="k">export</span> BUG_REPORT_API_TOKEN=<span class="s">"$(grep BUG_REPORT_API_TOKEN '/Users/barnie/Claude AI /Regi/.env' | cut -d'\"' -f2)"</span></pre></div>
+      <p>Add the same line to <code>~/.zshrc</code> so new shells pick it up automatically.</p>
+      <div class="callout warn">
+        <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M21.73 18.05a2 2 0 0 1-1.74 3H4.01a2 2 0 0 1-1.74-3L10.26 4.05a2 2 0 0 1 3.48 0Z"/></svg></span>
+        <p><b>Rotate before sharing this token externally.</b> Regenerate with <code>openssl rand -hex 32</code>, update <code>.env</code> and <code>sst.config.ts</code>, then redeploy the ECS task definition.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h3>Verify the connection</h3>
+      <p>Token sanity-check (no DB write):</p>
+      <div class="code"><button class="copy" data-copy>Copy</button><pre><span class="k">PROD</span>=<span class="s">"http://WebLoadBalancer-tbaambtx-482012902.ap-southeast-2.elb.amazonaws.com"</span>
+<span class="fn">curl</span> -s -H <span class="s">"Authorization: Bearer $BUG_REPORT_API_TOKEN"</span> <span class="s">"$PROD/api/bug-reports"</span>
+<span class="c"># → {"ok":true,"message":"Token valid"}</span></pre></div>
+
+      <p>Log a real bug end-to-end:</p>
+      <div class="code"><button class="copy" data-copy>Copy</button><pre><span class="fn">curl</span> -s -X POST <span class="s">"$PROD/api/bug-reports"</span> \
+  -H <span class="s">"Authorization: Bearer $BUG_REPORT_API_TOKEN"</span> \
+  -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{
+    "description": "Smoke test from Playwright MCP setup",
+    "affectedAreas": ["other"],
+    "reporter": "playwright"
+  }'</span>
+<span class="c"># → {"ok":true,"id":"...","createdAt":"...","url":"/settings/support"}</span></pre></div>
+
+      <p>Open <b>Settings → Support</b> in the app — the bug appears in the Open list.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h3>Run a real test from a Claude prompt</h3>
+      <p>Once Playwright MCP is connected, prompt Claude with what you want tested. Three example prompts that work today:</p>
+
+      <h3 style="margin-top:18px;font-size:14px;color:var(--muted)">A · Login &amp; role gating</h3>
+      <div class="code"><pre>Test login on the prod URL. Sign in as owner@regionalhealth.co.nz.
+Confirm the sidebar shows all 11 nav items.
+If any are missing, log a bug via the API
+under "auth" describing which item is missing.</pre></div>
+
+      <h3 style="font-size:14px;color:var(--muted)">B · PO form auto-fill</h3>
+      <div class="code"><pre>On prod, go to Purchase Orders → New, pick a supplier whose
+currency is set to USD in the supplier record. Verify Currency
+auto-snaps to USD. If it stays NZD, log a bug under
+"purchase-orders" with the supplier name and what you saw.</pre></div>
+
+      <h3 style="font-size:14px;color:var(--muted)">C · Multi-image upload (dogfood)</h3>
+      <div class="code"><pre>On a product detail page, switch to Images tab. Upload three
+small JPEG images. Verify all three appear, the first has a
+green ★ Primary badge, and clicking ★ Primary on a non-primary
+image promotes it. If anything fails, drive the UI to
+Settings → Support and log a bug with reporter "playwright".</pre></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── 5. API reference ─────────────── -->
+<section>
+  <h2>
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg></span>
+    API reference
+  </h2>
+  <p class="blurb">
+    <code>POST /api/bug-reports</code> · auth: <code>Authorization: Bearer &lt;token&gt;</code>
+  </p>
+
+  <h3>Body schema</h3>
+  <table>
+    <thead>
+      <tr><th>Field</th><th>Type</th><th>Req</th><th>Notes</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>description</code></td>
+        <td>string</td>
+        <td>✓</td>
+        <td>1–5000 chars, trimmed.</td>
+      </tr>
+      <tr>
+        <td><code>affectedAreas</code></td>
+        <td>string[]</td>
+        <td></td>
+        <td>Subset of canonical keys (table below).</td>
+      </tr>
+      <tr>
+        <td><code>driveLink</code></td>
+        <td>string | null</td>
+        <td></td>
+        <td>Valid URL when present, max 2048 chars.</td>
+      </tr>
+      <tr>
+        <td><code>reporter</code></td>
+        <td>string | null</td>
+        <td></td>
+        <td>Free text, max 120 chars.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Canonical area keys</h3>
+  <p style="font-family:var(--font-mono);font-size:13px;background:var(--tint);padding:12px 14px;border-radius:8px;line-height:1.9;">
+    dashboard · products · inventory · purchase-orders · sales-orders · proforma · reservations · suppliers · customers · reports · settings · mobile · qbo-sync · auth · other
+  </p>
+
+  <h3>Responses</h3>
+  <table>
+    <thead><tr><th>Status</th><th>Body</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><b>201</b></td><td><code>{ok:true, id, createdAt, url}</code></td><td>Bug logged.</td></tr>
+      <tr><td><b>400</b></td><td><code>{ok:false, error, fieldErrors}</code></td><td>Payload invalid (Zod).</td></tr>
+      <tr><td><b>401</b></td><td><code>{ok:false, error:"Unauthorized"}</code></td><td>Missing or wrong token.</td></tr>
+      <tr><td><b>500</b></td><td><code>{ok:false, error:"Server not configured"}</code></td><td>Token env var unset.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ─────────────── 6. Best practices ─────────────── -->
+<section>
+  <h2>
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+    Best practices
+  </h2>
+  <ul>
+    <li><b>One bug per POST.</b> Don't batch unrelated symptoms — the area-tickbox filter works better with single-symptom rows.</li>
+    <li><b>Structure descriptions.</b> Multi-line works. Try <code>Steps:</code> / <code>Expected:</code> / <code>Actual:</code> at the top of every report.</li>
+    <li><b>Drop screenshots in Drive, paste the URL.</b> The <code>driveLink</code> field exists for exactly this; the in-app row shows a one-click "Drive ↗" button.</li>
+    <li><b>Use <code>reporter</code> consistently.</b> <code>"playwright"</code> for automated runs, your name for manual ones — makes filtering by source trivial.</li>
+    <li><b>Don't log infra noise.</b> ALB 502s and DB timeouts aren't Regi defects. The tracker is for app-level behaviour.</li>
+    <li><b>Mark solved fast.</b> The Open filter only stays useful if it's pruned. Toggle the green tick the moment a fix lands.</li>
+  </ul>
+</section>
+
+<!-- ─────────────── 7. Troubleshooting ─────────────── -->
+<section>
+  <h2>
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
+    Troubleshooting
+  </h2>
+  <table>
+    <thead><tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr><td>401 with no token</td><td>Header missing</td><td>Add <code>Authorization: Bearer $BUG_REPORT_API_TOKEN</code>.</td></tr>
+      <tr><td>401 with the right token</td><td>Old image deployed before token wired up</td><td>Re-register task def with the env var; force a new deployment.</td></tr>
+      <tr><td>500 "Server not configured"</td><td>Env var missing on the live ECS task</td><td>Patch task def → bump revision → update service.</td></tr>
+      <tr><td>307 → /login</td><td>Route not in middleware <code>PUBLIC_PATHS</code></td><td>Add <code>/api/bug-reports</code> to the allowlist; redeploy.</td></tr>
+      <tr><td>400 "Invalid payload" → <code>affectedAreas</code></td><td>Used a label instead of a slug</td><td>Use slugs (<code>purchase-orders</code>, not <code>"Purchase Orders"</code>).</td></tr>
+      <tr><td>Playwright tools missing in <code>/mcp</code></td><td>Server not registered or session not restarted</td><td>Re-run the install command, restart Claude.</td></tr>
+    </tbody>
+  </table>
+  <div class="callout danger">
+    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M15 9 9 15"/><path d="M9 9l6 6"/></svg></span>
+    <p><b>Never paste the production token into shared docs, screenshots, or external chats.</b> If it leaks, rotate it immediately — both <code>.env</code> and <code>sst.config.ts</code> need to update, then redeploy.</p>
+  </div>
+</section>
+
+<!-- ─────────────── 8. File map ─────────────── -->
+<section>
+  <h2>
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span>
+    Files added by this integration
+  </h2>
+  <table>
+    <thead><tr><th>Path</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>app/api/bug-reports/route.ts</code></td><td>Token-gated POST + GET handlers.</td></tr>
+      <tr><td><code>middleware.ts</code></td><td>Adds the route to <code>PUBLIC_PATHS</code>.</td></tr>
+      <tr><td><code>.env</code></td><td>Local dev <code>BUG_REPORT_API_TOKEN</code>.</td></tr>
+      <tr><td><code>sst.config.ts</code></td><td>Prod <code>BUG_REPORT_API_TOKEN</code> (ECS env).</td></tr>
+      <tr><td><code>__tests__/api/bug-reports.test.ts</code></td><td>Pin tests for auth + tenant + Zod.</td></tr>
+      <tr><td><code>__tests__/auth/rbac-matrix.test.ts</code></td><td>Pins the route as public-with-own-auth.</td></tr>
+      <tr><td><code>docs/playwright-mcp-testing.md</code></td><td>Markdown reference (this file's text source).</td></tr>
+      <tr><td><code>docs/playwright-mcp-testing.html</code></td><td>This designed visual guide.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+
+<footer>
+  Regi · QA tooling · generated for the Mac Mini deploy ·
+  <a href="https://github.com/microsoft/playwright-mcp">Playwright MCP →</a>
+</footer>
+
+<script>
+  document.querySelectorAll('button[data-copy]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const code = btn.parentElement.querySelector('pre').innerText;
+      try {
+        await navigator.clipboard.writeText(code);
+        const original = btn.textContent;
+        btn.textContent = 'Copied';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = original;
+          btn.classList.remove('copied');
+        }, 1500);
+      } catch {
+        btn.textContent = 'Press ⌘C';
+      }
+    });
+  });
+</script>
+</body>
+</html>

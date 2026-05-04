@@ -110,6 +110,16 @@ const ROUTES_REQUIRE_SESSION: string[] = [
   // Image-serve route — gated by tenant via the image's product, not by role.
   "app/api/product-images/[id]/route.ts",
 ];
+
+// API routes that DON'T use requireSession at all — they have their own
+// auth scheme (bearer token, signed callback, etc.). The pin asserts the
+// route appears in middleware's PUBLIC_PATHS allowlist so it's reachable.
+const ROUTES_PUBLIC_WITH_OWN_AUTH: { path: string; allowlistPrefix: string }[] = [
+  {
+    path: "app/api/bug-reports/route.ts",
+    allowlistPrefix: "/api/bug-reports",
+  },
+];
 const ROUTES_ADMIN_ONLY: string[] = [
   "app/api/reports/valuation.pdf/route.tsx",
   "app/api/reports/stock-on-hand.csv/route.ts",
@@ -186,6 +196,29 @@ describe("RBAC pin: API routes", () => {
     expect(src).toMatch(/await\s+requireSession\s*\(\s*\)/);
     expect(src).toMatch(/assertTenant\(/);
   });
+});
+
+describe("RBAC pin: public-allowlist routes that handle their own auth", () => {
+  const middleware = readSource("middleware.ts");
+
+  it.each(ROUTES_PUBLIC_WITH_OWN_AUTH)(
+    "$path is in middleware PUBLIC_PATHS",
+    ({ allowlistPrefix }) => {
+      // The path must literally appear inside the PUBLIC_PATHS array.
+      expect(middleware).toMatch(
+        new RegExp(`["']${allowlistPrefix.replace(/\//g, "\\/")}["']`),
+      );
+    },
+  );
+
+  it.each(ROUTES_PUBLIC_WITH_OWN_AUTH)(
+    "$path does NOT call requireSession / requireRole (it uses its own auth)",
+    ({ path }) => {
+      const src = readSource(path);
+      expect(src).not.toMatch(/await\s+requireSession\b/);
+      expect(src).not.toMatch(/await\s+requireRole\b/);
+    },
+  );
 });
 
 describe("RBAC pin: server actions — every export gated", () => {

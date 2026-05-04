@@ -6,6 +6,9 @@ const PUBLIC_PATHS = [
   "/api/qbo/callback",
   "/api/cron",
   "/api/health",
+  // Bug-report intake for external testers (Playwright MCP etc.). The route
+  // gates on Authorization: Bearer <BUG_REPORT_API_TOKEN> internally.
+  "/api/bug-reports",
   // PWA shell assets need to load before sign-in (so the install prompt works).
   "/manifest.webmanifest",
   "/icons",
