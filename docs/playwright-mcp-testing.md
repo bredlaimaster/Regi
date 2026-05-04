@@ -2,6 +2,11 @@
 
 End-to-end testing of the Regi web app via [Playwright MCP](https://github.com/microsoft/playwright-mcp), with automated bug logging into Settings → Support.
 
+> **Designed visual version of this guide:** open the deployed
+> [`/docs/playwright-mcp-testing.html`](http://WebLoadBalancer-tbaambtx-482012902.ap-southeast-2.elb.amazonaws.com/docs/playwright-mcp-testing.html)
+> in a browser. The HTML lives at `public/docs/playwright-mcp-testing.html` so
+> it's served by Next.js without auth.
+
 ## What this gets you
 
 - A real browser driving the live app, controlled by Claude Code from the terminal.
@@ -165,5 +170,6 @@ Token-only health check. Returns `{ ok: true, message: "Token valid" }` when the
 - `.env` + `sst.config.ts` — `BUG_REPORT_API_TOKEN` wiring.
 - `__tests__/api/bug-reports.test.ts` — pin tests for auth + tenant + Zod.
 - `__tests__/auth/rbac-matrix.test.ts` — extended to cover the new public-with-own-auth route.
-- `docs/playwright-mcp-testing.html` — designed visual version of this doc.
+- `public/docs/playwright-mcp-testing.html` — designed visual guide, served at
+  `/docs/playwright-mcp-testing.html` by the deployed app (no login required).
 - `docs/playwright-mcp-testing.md` — this file.

@@ -9,6 +9,9 @@ const PUBLIC_PATHS = [
   // Bug-report intake for external testers (Playwright MCP etc.). The route
   // gates on Authorization: Bearer <BUG_REPORT_API_TOKEN> internally.
   "/api/bug-reports",
+  // Static documentation (testing guides, tester walkthroughs). These are
+  // public pages, not gated by login — the URL is shareable.
+  "/docs",
   // PWA shell assets need to load before sign-in (so the install prompt works).
   "/manifest.webmanifest",
   "/icons",
