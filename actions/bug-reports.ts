@@ -7,6 +7,7 @@ import {
   CreateBugReportSchema,
   UpdateBugReportSchema,
   ToggleSolvedSchema,
+  ToggleAiFixSchema,
   DeleteBugReportSchema,
 } from "@/lib/schemas/bug-reports";
 
@@ -91,6 +92,33 @@ export async function toggleBugSolved(input: unknown): Promise<ActionResult> {
     data: {
       solved,
       resolvedAt: solved ? new Date() : null,
+    },
+  });
+
+  revalidatePath("/settings/support");
+  return { ok: true, data: null };
+}
+
+/**
+ * Flip the AI-fix flag. Stamps `aiFlaggedAt` on enable, clears it on disable.
+ * Independent from `solved` — a bug can be flagged for AI even after a human
+ * fix, and an open bug can be flagged or unflagged at any time.
+ */
+export async function toggleBugAiFix(input: unknown): Promise<ActionResult> {
+  const session = await requireRole(["ADMIN"]);
+  const parsed = ToggleAiFixSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid input" };
+  const { id, aiFix } = parsed.data;
+
+  const existing = await prisma.bugReport.findUnique({ where: { id } });
+  if (!existing) return { ok: false, error: "Not found" };
+  assertTenant(existing.tenantId, session.tenantId);
+
+  await prisma.bugReport.update({
+    where: { id },
+    data: {
+      aiFix,
+      aiFlaggedAt: aiFix ? new Date() : null,
     },
   });
 

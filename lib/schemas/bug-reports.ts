@@ -39,6 +39,11 @@ export const ToggleSolvedSchema = z.object({
   solved: z.boolean(),
 });
 
+export const ToggleAiFixSchema = z.object({
+  id: z.string().min(1),
+  aiFix: z.boolean(),
+});
+
 export const DeleteBugReportSchema = z.object({
   id: z.string().min(1),
 });

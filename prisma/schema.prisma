@@ -735,10 +735,16 @@ model BugReport {
   reporter      String?                                    // free-text, e.g. "son", optional
   solved        Boolean   @default(false)
   resolvedAt    DateTime?
+  /// Tester or admin flags a bug for the AI to fix in a future pass. Orthogonal
+  /// to `solved` — an open bug can be flagged (queued) or unflagged. Once a bug
+  /// is solved the flag becomes moot, but we keep the timestamp for history.
+  aiFix         Boolean   @default(false)
+  aiFlaggedAt   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   @@index([tenantId, solved, createdAt])
+  @@index([tenantId, aiFix, solved])
 }
 
 // ─── Product images ───────────────────────────────────────────────────────────

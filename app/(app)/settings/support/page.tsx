@@ -22,6 +22,8 @@ export default async function SupportPage() {
     reporter: b.reporter,
     solved: b.solved,
     resolvedAt: b.resolvedAt?.toISOString() ?? null,
+    aiFix: b.aiFix,
+    aiFlaggedAt: b.aiFlaggedAt?.toISOString() ?? null,
     createdAt: b.createdAt.toISOString(),
   }));
 

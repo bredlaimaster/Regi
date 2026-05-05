@@ -23,11 +23,13 @@ import {
   ExternalLink,
   CheckCircle2,
   CircleDashed,
+  Sparkles,
 } from "lucide-react";
 import {
   createBugReport,
   updateBugReport,
   toggleBugSolved,
+  toggleBugAiFix,
   deleteBugReport,
 } from "@/actions/bug-reports";
 import { BUG_AREAS, bugAreaLabel } from "@/lib/bug-areas";
@@ -41,10 +43,12 @@ type Bug = {
   reporter: string | null;
   solved: boolean;
   resolvedAt: string | null;
+  aiFix: boolean;
+  aiFlaggedAt: string | null;
   createdAt: string;
 };
 
-type Filter = "open" | "solved" | "all";
+type Filter = "open" | "solved" | "ai" | "all";
 
 const EMPTY_DRAFT = {
   description: "",
@@ -65,6 +69,7 @@ export function BugTracker({ bugs }: { bugs: Bug[] }) {
     () => ({
       open: bugs.filter((b) => !b.solved).length,
       solved: bugs.filter((b) => b.solved).length,
+      ai: bugs.filter((b) => b.aiFix && !b.solved).length,
       all: bugs.length,
     }),
     [bugs],
@@ -73,6 +78,7 @@ export function BugTracker({ bugs }: { bugs: Bug[] }) {
   const visible = useMemo(() => {
     if (filter === "open") return bugs.filter((b) => !b.solved);
     if (filter === "solved") return bugs.filter((b) => b.solved);
+    if (filter === "ai") return bugs.filter((b) => b.aiFix && !b.solved);
     return bugs;
   }, [bugs, filter]);
 
@@ -144,6 +150,18 @@ export function BugTracker({ bugs }: { bugs: Bug[] }) {
     });
   }
 
+  function onToggleAiFix(bug: Bug) {
+    start(async () => {
+      const res = await toggleBugAiFix({ id: bug.id, aiFix: !bug.aiFix });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success(bug.aiFix ? "Removed from AI queue" : "Flagged for AI to fix");
+      router.refresh();
+    });
+  }
+
   function onDelete(bug: Bug) {
     if (!confirm(`Delete this bug? ${bug.description.slice(0, 60)}…`)) return;
     start(async () => {
@@ -169,6 +187,15 @@ export function BugTracker({ bugs }: { bugs: Bug[] }) {
           onClick={() => setFilter("solved")}
         >
           Solved <span className="ml-1.5 opacity-70">{counts.solved}</span>
+        </FilterChip>
+        <FilterChip
+          active={filter === "ai"}
+          onClick={() => setFilter("ai")}
+          tone="ai"
+        >
+          <Sparkles className="h-3 w-3 mr-1" />
+          Flagged for AI
+          <span className="ml-1.5 opacity-80">{counts.ai}</span>
         </FilterChip>
         <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>
           All <span className="ml-1.5 opacity-70">{counts.all}</span>
@@ -199,6 +226,7 @@ export function BugTracker({ bugs }: { bugs: Bug[] }) {
               key={bug.id}
               bug={bug}
               onToggleSolved={() => onToggleSolved(bug)}
+              onToggleAiFix={() => onToggleAiFix(bug)}
               onEdit={() => openEditBug(bug)}
               onDelete={() => onDelete(bug)}
               disabled={pending}
@@ -312,20 +340,28 @@ function FilterChip({
   active,
   onClick,
   children,
+  tone,
 }: {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;
+  tone?: "ai";
 }) {
+  const baseInactive =
+    tone === "ai"
+      ? "bg-violet-50 dark:bg-violet-950/20 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-900 hover:bg-violet-100 dark:hover:bg-violet-950/40"
+      : "bg-background hover:bg-muted";
+  const baseActive =
+    tone === "ai"
+      ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white border-transparent shadow-sm shadow-violet-500/30"
+      : "bg-primary text-primary-foreground border-primary";
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
         "inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
-        active
-          ? "bg-primary text-primary-foreground border-primary"
-          : "bg-background hover:bg-muted",
+        active ? baseActive : baseInactive,
       )}
     >
       {children}
@@ -336,40 +372,79 @@ function FilterChip({
 function BugRow({
   bug,
   onToggleSolved,
+  onToggleAiFix,
   onEdit,
   onDelete,
   disabled,
 }: {
   bug: Bug;
   onToggleSolved: () => void;
+  onToggleAiFix: () => void;
   onEdit: () => void;
   onDelete: () => void;
   disabled: boolean;
 }) {
+  // An *active* AI flag = flagged AND not yet solved. Once solved, the flag
+  // is historical only — we keep the timestamp but don't draw attention to it.
+  const aiActive = bug.aiFix && !bug.solved;
+
   return (
     <Card
       className={cn(
-        "transition-colors",
+        "transition-all",
         bug.solved && "bg-muted/40 border-muted",
+        aiActive &&
+          "border-violet-300 dark:border-violet-800 shadow-[0_0_0_1px_rgba(139,92,246,0.15),0_8px_24px_-8px_rgba(139,92,246,0.25)] bg-gradient-to-r from-violet-50/60 to-transparent dark:from-violet-950/20",
       )}
     >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          {/* Left: solved tickbox */}
-          <button
-            type="button"
-            onClick={onToggleSolved}
-            disabled={disabled}
-            className="mt-0.5 shrink-0 rounded text-muted-foreground hover:text-foreground"
-            aria-label={bug.solved ? "Mark as open" : "Mark as solved"}
-            title={bug.solved ? "Mark as open" : "Mark as solved"}
-          >
-            {bug.solved ? (
-              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-            ) : (
-              <CircleDashed className="h-5 w-5" />
-            )}
-          </button>
+          {/* Left: two stacked tickboxes — solved + AI-fix */}
+          <div className="flex flex-col items-center gap-1.5 mt-0.5 shrink-0">
+            <button
+              type="button"
+              onClick={onToggleSolved}
+              disabled={disabled}
+              className="rounded text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={bug.solved ? "Mark as open" : "Mark as solved"}
+              title={bug.solved ? "Mark as open" : "Mark as solved"}
+            >
+              {bug.solved ? (
+                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              ) : (
+                <CircleDashed className="h-5 w-5" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={onToggleAiFix}
+              disabled={disabled}
+              className={cn(
+                "group relative h-7 w-7 rounded-full inline-flex items-center justify-center transition-all",
+                aiActive
+                  ? "bg-gradient-to-br from-violet-500 via-violet-600 to-fuchsia-600 ring-2 ring-violet-200 dark:ring-violet-900 shadow-md shadow-violet-500/40 hover:scale-105"
+                  : "ring-1 ring-dashed ring-violet-300/70 dark:ring-violet-800 text-violet-400 dark:text-violet-600 hover:ring-violet-400 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/30",
+              )}
+              aria-label={
+                bug.aiFix
+                  ? "Remove AI-fix flag"
+                  : "Flag this bug for the AI to fix"
+              }
+              title={
+                bug.aiFix
+                  ? "Flagged for AI to fix — click to unflag"
+                  : "Flag this bug for the AI to fix"
+              }
+            >
+              <Sparkles
+                className={cn(
+                  "h-3.5 w-3.5 transition-transform",
+                  aiActive && "text-white drop-shadow-sm group-hover:rotate-12",
+                )}
+              />
+            </button>
+          </div>
 
           {/* Middle: description + meta */}
           <div className="grow min-w-0 space-y-2">
@@ -382,15 +457,25 @@ function BugRow({
               {bug.description}
             </div>
 
-            {bug.affectedAreas.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {bug.affectedAreas.map((key) => (
-                  <Badge key={key} variant="secondary" className="text-xs">
-                    {bugAreaLabel(key)}
-                  </Badge>
-                ))}
-              </div>
-            )}
+            <div className="flex flex-wrap gap-1">
+              {aiActive && (
+                <Badge
+                  className="text-xs bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white border-transparent hover:from-violet-700 hover:to-fuchsia-700"
+                  title={
+                    bug.aiFlaggedAt
+                      ? `Flagged ${formatNzDateTime(bug.aiFlaggedAt)}`
+                      : undefined
+                  }
+                >
+                  <Sparkles className="h-3 w-3 mr-1" /> AI to fix
+                </Badge>
+              )}
+              {bug.affectedAreas.map((key) => (
+                <Badge key={key} variant="secondary" className="text-xs">
+                  {bugAreaLabel(key)}
+                </Badge>
+              ))}
+            </div>
 
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
               <span title={bug.createdAt}>
@@ -400,6 +485,11 @@ function BugRow({
               {bug.solved && bug.resolvedAt && (
                 <span className="text-emerald-700">
                   · solved {formatNzDateTime(bug.resolvedAt)}
+                </span>
+              )}
+              {aiActive && bug.aiFlaggedAt && (
+                <span className="text-violet-700 dark:text-violet-300">
+                  · flagged for AI {formatNzDateTime(bug.aiFlaggedAt)}
                 </span>
               )}
               {bug.driveLink && (
