@@ -1,0 +1,1478 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Customer Order Portal — Plan & Walkthrough</title>
+<style>
+  :root {
+    --indigo:   #4338ca;
+    --indigo-2: #312e81;
+    --violet:   #7c3aed;
+    --pink:     #db2777;
+    --amber:    #f59e0b;
+    --emerald:  #059669;
+    --rose:     #e11d48;
+    --teal:     #0d9488;
+    --sky:      #0284c7;
+
+    --bg:       #fafafa;
+    --card:     #ffffff;
+    --ink:      #0f172a;
+    --muted:    #475569;
+    --soft:     #94a3b8;
+    --line:     #e2e8f0;
+    --tint:     #f1f5f9;
+    --tint-2:   #f8fafc;
+
+    --code-bg:  #0f172a;
+    --code-fg:  #e2e8f0;
+
+    --radius:   16px;
+    --shadow:   0 1px 2px rgba(15,23,42,.04), 0 8px 24px rgba(15,23,42,.06);
+    --shadow-l: 0 2px 6px rgba(15,23,42,.06), 0 24px 48px rgba(15,23,42,.10);
+
+    --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ───── Hero ───── */
+  .hero {
+    background:
+      radial-gradient(800px 380px at 12% 0%, rgba(255,255,255,.18), transparent 60%),
+      radial-gradient(560px 280px at 92% 100%, rgba(245,158,11,.28), transparent 60%),
+      linear-gradient(135deg, var(--indigo-2) 0%, var(--violet) 50%, var(--pink) 100%);
+    color: #fff;
+    padding: 96px 24px 80px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,.05) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask: linear-gradient(180deg, black 0%, black 60%, transparent 100%);
+    pointer-events: none;
+  }
+  .hero-inner {
+    max-width: 980px;
+    margin: 0 auto;
+    position: relative;
+  }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px;
+    background: rgba(255,255,255,.14);
+    border: 1px solid rgba(255,255,255,.22);
+    border-radius: 999px;
+    font-size: 12px; font-weight: 700;
+    letter-spacing: .04em; text-transform: uppercase;
+    backdrop-filter: blur(8px);
+  }
+  h1 {
+    font-size: 60px; font-weight: 800;
+    line-height: 1.04; letter-spacing: -.025em;
+    margin: 20px 0 14px;
+  }
+  .lede {
+    font-size: 21px;
+    color: rgba(255,255,255,.92);
+    max-width: 820px;
+    margin: 0 0 36px;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    max-width: 760px;
+  }
+  .stat {
+    background: rgba(255,255,255,.10);
+    border: 1px solid rgba(255,255,255,.18);
+    backdrop-filter: blur(8px);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .stat .num { font-size: 26px; font-weight: 800; line-height: 1; }
+  .stat .lbl { font-size: 12px; color: rgba(255,255,255,.78); margin-top: 6px; }
+
+  /* ───── Page layout ───── */
+  main {
+    max-width: 980px;
+    margin: -36px auto 0;
+    padding: 0 24px 96px;
+    position: relative;
+    z-index: 1;
+  }
+  section {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 40px 40px;
+    margin-bottom: 28px;
+  }
+  section.tight { padding: 28px 40px; }
+  section h2 {
+    display: flex; align-items: center; gap: 12px;
+    margin: 0 0 8px;
+    font-size: 26px; font-weight: 800;
+    letter-spacing: -.012em;
+  }
+  section h2 .icon {
+    width: 36px; height: 36px;
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    border-radius: 10px;
+    background: var(--tint);
+    color: var(--indigo);
+    flex-shrink: 0;
+  }
+  section h2 .icon svg { width: 20px; height: 20px; }
+  section .blurb {
+    color: var(--muted);
+    margin: 0 0 24px;
+    font-size: 16px;
+  }
+  section h3 {
+    font-size: 18px; font-weight: 700;
+    margin: 28px 0 10px;
+    letter-spacing: -.005em;
+  }
+  section h4 {
+    font-size: 14px; font-weight: 700;
+    color: var(--muted);
+    margin: 20px 0 6px;
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+
+  p { margin: 0 0 14px; }
+  ul, ol { padding-left: 22px; margin: 8px 0 16px; }
+  li { margin-bottom: 6px; }
+  a { color: var(--indigo); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code {
+    font-family: var(--font-mono); font-size: 13.5px;
+    background: var(--tint); padding: 2px 6px;
+    border-radius: 5px; color: var(--ink);
+  }
+  strong { color: var(--ink); }
+
+  /* ───── Tables ───── */
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 14px; font-size: 14.5px; }
+  th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; font-weight: 800; letter-spacing: .04em; color: var(--muted); text-transform: uppercase; background: var(--tint); }
+  tbody tr:hover { background: rgba(67, 56, 202, .03); }
+  td.center, th.center { text-align: center; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* ───── Pills ───── */
+  .pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: .03em;
+  }
+  .pill-good { background: #dcfce7; color: #15803d; }
+  .pill-bad  { background: #fee2e2; color: #b91c1c; }
+  .pill-mid  { background: #fef3c7; color: #92400e; }
+  .pill-info { background: #dbeafe; color: #1d4ed8; }
+  .pill-soft { background: var(--tint); color: var(--muted); }
+
+  /* ───── Callouts ───── */
+  .callout {
+    display: flex; gap: 14px;
+    padding: 16px 18px;
+    border-radius: 10px;
+    border-left: 4px solid;
+    margin: 10px 0 14px;
+    font-size: 14.5px;
+  }
+  .callout .icon { flex-shrink: 0; margin-top: 2px; }
+  .callout.tip      { background: #ecfdf5; border-color: var(--emerald); }
+  .callout.tip .icon    { color: var(--emerald); }
+  .callout.warn     { background: #fffbeb; border-color: var(--amber); }
+  .callout.warn .icon   { color: var(--amber); }
+  .callout.danger   { background: #fef2f2; border-color: var(--rose); }
+  .callout.danger .icon { color: var(--rose); }
+  .callout.info     { background: #eff6ff; border-color: var(--sky); }
+  .callout.info .icon   { color: var(--sky); }
+  .callout p { margin: 0; color: #1e293b; }
+
+  /* ───── Recommendation card ───── */
+  .recommend {
+    background: linear-gradient(135deg, #4338ca 0%, #7c3aed 100%);
+    color: white;
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    margin: 14px 0 8px;
+    box-shadow: var(--shadow-l);
+  }
+  .recommend .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,.16);
+    border: 1px solid rgba(255,255,255,.28);
+    padding: 4px 12px; border-radius: 999px;
+    font-size: 11px; font-weight: 800; letter-spacing: .05em;
+    text-transform: uppercase;
+  }
+  .recommend h3 {
+    color: white; font-size: 22px; font-weight: 800;
+    margin: 12px 0 8px;
+  }
+  .recommend p { color: rgba(255,255,255,.92); margin: 0 0 12px; font-size: 15px; }
+  .recommend ul { color: rgba(255,255,255,.92); margin-top: 12px; }
+  .recommend code { background: rgba(0,0,0,.20); color: #fde68a; }
+
+  /* ───── Numbered steps ───── */
+  .step {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 18px;
+    align-items: flex-start;
+    padding: 24px 0;
+    border-top: 1px solid var(--line);
+  }
+  .step:first-of-type { border-top: 0; padding-top: 4px; }
+  .step-num {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 18px;
+    color: white;
+    background: linear-gradient(135deg, var(--indigo), var(--violet));
+    box-shadow: 0 6px 16px rgba(67, 56, 202, .25);
+  }
+  .step h3 { margin-top: 0; }
+
+  /* ───── Browser-frame mockups ───── */
+  .browser {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-l);
+    background: white;
+    margin: 18px 0;
+  }
+  .browser .chrome {
+    background: linear-gradient(180deg, #f8fafc, #eef2f7);
+    border-bottom: 1px solid var(--line);
+    padding: 9px 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .browser .dots { display: flex; gap: 6px; }
+  .browser .dots span {
+    width: 11px; height: 11px; border-radius: 50%;
+    background: #cbd5e1;
+  }
+  .browser .dots span:nth-child(1) { background: #fb7185; }
+  .browser .dots span:nth-child(2) { background: #fbbf24; }
+  .browser .dots span:nth-child(3) { background: #34d399; }
+  .browser .url {
+    flex: 1; padding: 5px 12px;
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .browser .url-lock { color: var(--emerald); }
+  .browser .body {
+    padding: 0;
+    min-height: 200px;
+    /* background is set per-mockup (.ui-login / .ui-2fa / .ui-portal / .admin)
+       — avoid setting one here so we don't have to bump specificity on every
+       child. */
+  }
+
+  /* — Login mockup — */
+  .ui-login {
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #0f172a, #1e1b4b);
+    color: white;
+    padding: 60px 20px;
+  }
+  .ui-login .panel {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.10);
+    backdrop-filter: blur(10px);
+    border-radius: 14px;
+    padding: 32px 28px;
+    width: 100%; max-width: 360px;
+  }
+  .ui-login h3 { font-size: 20px; margin: 0 0 4px; color: white; }
+  .ui-login .sub { font-size: 13px; color: rgba(255,255,255,.65); margin-bottom: 22px; }
+  .ui-login label { font-size: 12px; color: rgba(255,255,255,.78); display: block; margin-bottom: 5px; font-weight: 600; }
+  .ui-login .input {
+    width: 100%; padding: 9px 12px;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 8px;
+    color: white;
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+  .ui-login .btn {
+    width: 100%; padding: 10px;
+    background: linear-gradient(135deg, var(--indigo), var(--violet));
+    color: white; font-weight: 700; font-size: 13px;
+    border: 0; border-radius: 8px;
+    cursor: pointer; margin-top: 4px;
+  }
+  .ui-login .alt {
+    font-size: 12px; color: rgba(255,255,255,.55);
+    text-align: center; margin-top: 16px;
+  }
+  .ui-login .alt a { color: rgba(255,255,255,.85); }
+  .ui-login .brand {
+    text-align: center; margin-bottom: 22px;
+    font-size: 11px; font-weight: 700; letter-spacing: .15em;
+    color: rgba(255,255,255,.55); text-transform: uppercase;
+  }
+
+  /* — 2FA mockups — */
+  .ui-2fa { padding: 36px; background: linear-gradient(135deg, #0f172a, #312e81); color: white; min-height: 380px; display: flex; align-items: center; justify-content: center; }
+  .ui-2fa .panel { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.10); border-radius: 14px; padding: 28px; max-width: 540px; width: 100%; }
+  .ui-2fa h3 { color: white; margin: 0 0 6px; font-size: 18px; }
+  .ui-2fa .sub { font-size: 13px; color: rgba(255,255,255,.65); margin-bottom: 18px; }
+  .ui-2fa .qrwrap {
+    background: white; border-radius: 10px;
+    padding: 14px;
+    width: 168px; height: 168px;
+    margin: 16px auto;
+    display: grid; place-items: center;
+  }
+  .ui-2fa .codes {
+    background: rgba(0,0,0,.30);
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: var(--font-mono); font-size: 12px;
+    line-height: 1.85;
+    color: rgba(255,255,255,.85);
+    column-count: 2;
+    margin: 12px 0;
+  }
+  .ui-2fa .otp {
+    display: flex; gap: 6px; justify-content: center; margin: 14px 0 4px;
+  }
+  .ui-2fa .otp input {
+    width: 38px; height: 44px; text-align: center;
+    background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.18);
+    color: white; font-size: 18px; font-weight: 700;
+    border-radius: 8px;
+  }
+  .ui-2fa .otp input:focus { outline: 2px solid var(--violet); border-color: transparent; }
+
+  /* — Portal pages mockup — */
+  .ui-portal { background: #f8fafc; min-height: 380px; }
+  .ui-portal .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 18px;
+    background: white;
+    border-bottom: 1px solid var(--line);
+  }
+  .ui-portal .topbar .logo {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-weight: 800; color: var(--indigo);
+    font-size: 14px;
+  }
+  .ui-portal .topbar .logo .dot { width: 10px; height: 10px; border-radius: 3px; background: linear-gradient(135deg, var(--indigo), var(--violet)); }
+  .ui-portal .topbar nav { display: flex; gap: 4px; font-size: 13px; }
+  .ui-portal .topbar nav a { padding: 5px 10px; border-radius: 6px; color: var(--muted); }
+  .ui-portal .topbar nav a.active { background: var(--tint); color: var(--ink); font-weight: 600; }
+  .ui-portal .topbar .me { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .ui-portal .topbar .me .av { width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #db2777, #f59e0b); display: grid; place-items: center; color: white; font-weight: 700; font-size: 11px; }
+  .ui-portal .body { padding: 20px 22px; }
+  .ui-portal h2.page-h { font-size: 20px; font-weight: 800; margin: 0 0 12px; }
+  .ui-portal .grid { display: grid; gap: 10px; }
+
+  /* product card */
+  .prod {
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: grid;
+    grid-template-columns: 56px 1fr auto auto;
+    gap: 14px;
+    align-items: center;
+  }
+  .prod .thumb {
+    width: 56px; height: 56px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    display: grid; place-items: center;
+    font-size: 22px;
+  }
+  .prod .name { font-weight: 700; font-size: 14px; }
+  .prod .sku  { font-family: var(--font-mono); font-size: 11px; color: var(--soft); }
+  .prod .stock { font-size: 11px; color: var(--muted); }
+  .prod .price { text-align: right; }
+  .prod .price .nzd { font-weight: 800; font-size: 15px; }
+  .prod .price .ex  { font-size: 11px; color: var(--soft); }
+  .prod .add { padding: 7px 14px; background: var(--ink); color: white; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; }
+
+  /* cart row */
+  .cart-row {
+    background: white; border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 14px;
+    display: grid; grid-template-columns: 56px 1fr 90px 90px 32px; gap: 14px;
+    align-items: center;
+  }
+  .cart-row .qty {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--tint); border: 1px solid var(--line);
+    padding: 4px 10px; border-radius: 8px;
+    font-weight: 700; font-size: 13px;
+  }
+  .cart-row .qty button { background: transparent; border: 0; cursor: pointer; color: var(--muted); font-size: 14px; padding: 0 4px; }
+  .cart-row .line-total { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .cart-row .x { color: var(--soft); cursor: pointer; font-size: 16px; text-align: center; }
+
+  .totals {
+    background: white; border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 18px;
+    margin-top: 12px;
+  }
+  .totals .row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 14px; }
+  .totals .row.total { font-weight: 800; font-size: 18px; padding-top: 10px; margin-top: 8px; border-top: 1px solid var(--line); }
+
+  /* order history */
+  .order {
+    background: white; border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 14px;
+    display: grid; grid-template-columns: 1fr auto auto auto; gap: 12px;
+    align-items: center;
+  }
+  .order .so { font-family: var(--font-mono); font-size: 12px; color: var(--soft); }
+  .order .lines { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .order .when  { font-size: 12px; color: var(--muted); }
+  .order .total { font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .order-pill { padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+  .order-draft   { background: #f1f5f9; color: #475569; }
+  .order-pending { background: #fef3c7; color: #92400e; }
+  .order-conf    { background: #dbeafe; color: #1d4ed8; }
+  .order-shipped { background: #dcfce7; color: #15803d; }
+
+  /* admin invite */
+  .admin {
+    background: #0f172a; padding: 22px;
+    color: white; min-height: 380px;
+  }
+  .admin .panel { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 20px 22px; max-width: 600px; margin: 8px auto; }
+  .admin h3 { color: white; margin: 0 0 4px; font-size: 18px; }
+  .admin .breadcrumb { font-size: 11px; color: #64748b; margin-bottom: 10px; }
+  .admin label { display: block; font-size: 12px; font-weight: 600; color: #cbd5e1; margin: 14px 0 5px; }
+  .admin .input {
+    width: 100%; padding: 9px 12px;
+    background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+    color: white; font-size: 13px;
+  }
+  .admin .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .admin .btnrow { margin-top: 18px; display: flex; gap: 10px; }
+  .admin .btn   { padding: 9px 18px; border-radius: 8px; border: 0; font-weight: 700; font-size: 13px; cursor: pointer; }
+  .admin .btn.primary { background: linear-gradient(135deg, var(--indigo), var(--violet)); color: white; }
+  .admin .btn.ghost   { background: transparent; color: #cbd5e1; border: 1px solid #334155; }
+
+  .admin .invitations {
+    margin-top: 18px;
+    background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+    overflow: hidden;
+  }
+  .admin .invitations .row {
+    display: grid; grid-template-columns: 1.4fr 1fr 1fr auto; gap: 10px;
+    padding: 10px 14px; align-items: center;
+    font-size: 12px; color: #cbd5e1;
+    border-top: 1px solid #1e293b;
+  }
+  .admin .invitations .row.head { border-top: 0; color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
+  .admin .invitations .row .pill { font-size: 10px; padding: 2px 8px; border-radius: 999px; }
+  .admin .invitations .row .pill.pending { background: #fef3c7; color: #92400e; }
+  .admin .invitations .row .pill.accepted { background: #dcfce7; color: #15803d; }
+  .admin .invitations .row .pill.expired { background: #f1f5f9; color: #64748b; }
+
+  /* QR code (faux pattern) */
+  .qr {
+    width: 140px; height: 140px;
+    display: grid;
+    grid-template-columns: repeat(21, 1fr);
+    grid-template-rows: repeat(21, 1fr);
+    gap: 0;
+  }
+  .qr div { background: #0f172a; }
+  .qr div.w { background: white; }
+
+  /* ───── SVG architecture diagram wrapper ───── */
+  .arch {
+    background: linear-gradient(135deg, #f5f3ff, #fef3c7 200%);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 28px;
+    margin: 6px 0 12px;
+  }
+  .arch svg { width: 100%; height: auto; max-height: 460px; display: block; }
+
+  /* ───── Comparison table tweaks ───── */
+  .compare th:first-child, .compare td:first-child { width: 22%; font-weight: 700; }
+  .compare td .pill { margin-right: 4px; }
+
+  /* ───── Roadmap rail ───── */
+  .roadmap {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 8px 0 12px;
+  }
+  .phase {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 18px;
+    background: var(--card);
+  }
+  .phase .head {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 6px;
+  }
+  .phase .num {
+    width: 26px; height: 26px; border-radius: 7px;
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 12px;
+    color: white;
+    background: linear-gradient(135deg, var(--indigo), var(--violet));
+  }
+  .phase h4 { margin: 0; color: var(--ink); text-transform: none; letter-spacing: 0; font-size: 15px; }
+  .phase .meta { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+  .phase ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
+  .phase li { color: var(--muted); margin-bottom: 4px; }
+
+  /* ───── Footer ───── */
+  footer {
+    text-align: center;
+    color: var(--soft);
+    font-size: 13px;
+    padding: 36px 24px;
+    border-top: 1px solid var(--line);
+    background: var(--card);
+  }
+
+  /* ───── Responsive ───── */
+  @media (max-width: 760px) {
+    h1 { font-size: 38px; }
+    .lede { font-size: 17px; }
+    .hero { padding: 56px 20px 56px; }
+    main { padding: 0 16px 64px; }
+    section { padding: 26px 22px; }
+    .stats { grid-template-columns: 1fr 1fr; }
+    .step { grid-template-columns: 44px 1fr; gap: 14px; }
+    .step-num { width: 36px; height: 36px; font-size: 15px; }
+    .roadmap { grid-template-columns: 1fr; }
+    .prod { grid-template-columns: 56px 1fr auto; }
+    .prod .stock-col { display: none; }
+    .cart-row { grid-template-columns: 1fr 80px 80px 24px; }
+    .cart-row .thumb { display: none; }
+    .ui-portal .topbar nav { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ───────────────────────── HERO ───────────────────────── -->
+<header class="hero">
+  <div class="hero-inner">
+    <span class="eyebrow">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+      Plan · Customer order portal
+    </span>
+    <h1>Let your customers<br>place their own orders.</h1>
+    <p class="lede">
+      A web portal where Chemist Warehouse (and any future customers)
+      log in, see their products at their price, drop a draft order, and
+      track its status — without phoning the sales rep. Built into the
+      app you already have, with TOTP two-factor authentication and an
+      invite-only signup flow that you control.
+    </p>
+    <div class="stats">
+      <div class="stat"><div class="num">6</div><div class="lbl">options compared</div></div>
+      <div class="stat"><div class="num">~6 days</div><div class="lbl">to ship Phase 1</div></div>
+      <div class="stat"><div class="num">2FA</div><div class="lbl">on by default</div></div>
+      <div class="stat"><div class="num">$0</div><div class="lbl">new infra cost</div></div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- ───────────────────────── EXEC SUMMARY ───────────────────────── -->
+<section>
+  <h2>
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
+    Executive summary
+  </h2>
+  <p class="blurb">If you only read one box, read this one.</p>
+
+  <div class="recommend">
+    <span class="badge">★ Recommended</span>
+    <h3>Embedded portal in the existing app, invite-only signup, TOTP 2FA from day one</h3>
+    <p>
+      Add a new route group <code>app/(portal)/…</code> living next to the
+      internal app, sharing the database but with strict customer-scoped guards.
+      Customers log in with email + password, set up an authenticator-app code
+      on first login, and place draft orders that your sales team confirms before
+      anything ships.
+    </p>
+    <ul>
+      <li><strong>Scope:</strong> ~6 days for Phase 1 (auth + catalogue + cart + draft orders + history). 2FA is part of Phase 1, not bolted on later.</li>
+      <li><strong>Infra:</strong> reuses your AWS ECS deployment, your Postgres, your iron-session — no new services, no monthly fees.</li>
+      <li><strong>Safety posture:</strong> TOTP 2FA, 8 single-use backup codes, password rules, rate-limited login, audit log of every auth event, invite-only signup.</li>
+      <li><strong>Order policy:</strong> portal customers can only create <code>DRAFT</code> SOs — internal staff confirm and ship. No "self-checkout-and-it's-gone" risk.</li>
+    </ul>
+  </div>
+
+  <p style="margin-top: 16px;">
+    The plan below explains why this option beats the alternatives, walks you
+    through every screen the customer (and your admin) will see, and lays out
+    the safety story in plain English. Five other approaches are compared —
+    headless storefronts, magic links, customer SSO, separate subdomains,
+    read-only-first — with the trade-offs that pushed each below the chosen
+    one.
+  </p>
+</section>
+
+<!-- ───────────────────────── TODAY'S REALITY ───────────────────────── -->
+<section>
+  <h2>
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+    Today's reality
+  </h2>
+  <p class="blurb">How orders flow now, and what changes.</p>
+
+  <h3>How an order happens today</h3>
+  <p>
+    A buyer at Chemist Warehouse picks up the phone, emails the rep, or
+    pings them in WhatsApp. Your sales rep at Regional Health logs into the
+    internal app, opens <strong>Sales Orders → New SO</strong>, picks the customer,
+    types the SKUs, and the form auto-applies that customer's price-group
+    pricing. Rep saves the SO; warehouse picks; rep ships; QBO sync runs.
+  </p>
+  <p>
+    This works, but it's friction for both sides:
+  </p>
+  <ul>
+    <li>The customer can't see <strong>what's in stock</strong> without asking.</li>
+    <li>They can't see <strong>their own order history</strong>.</li>
+    <li>Every order needs a rep to be available to take it.</li>
+    <li>Slips happen — rep mistypes a SKU, prices drift, units get confused.</li>
+  </ul>
+
+  <h3>What the portal changes</h3>
+  <p>
+    Customer logs in, sees their catalogue at <strong>their</strong> price, picks
+    quantities, submits. A new <code>DRAFT</code> sales order lands in your
+    internal app — your sales team gets a notification, reviews it, confirms,
+    and ships. Same final state as today; just half the friction and a much
+    better customer experience.
+  </p>
+
+  <div class="callout info">
+    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+    <p>
+      <strong>Critical design choice:</strong> portal customers create draft orders only.
+      Confirmation and fulfilment stay with your team. You keep control of pricing
+      mistakes, credit limit checks, and stock reservation rules — and you can
+      still run a phone-and-email order alongside if you want. The portal is
+      additive, not a replacement.
+    </p>
+  </div>
+</section>
+
+<!-- ───────────────────────── 6 OPTIONS ───────────────────────── -->
+<section>
+  <h2>
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span>
+    Six options compared
+  </h2>
+  <p class="blurb">What we considered, and why most got dropped.</p>
+
+  <table class="compare">
+    <thead>
+      <tr>
+        <th>Option</th>
+        <th>Build effort</th>
+        <th>Infra cost</th>
+        <th>Customer UX</th>
+        <th>Security ceiling</th>
+        <th>Verdict</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="background: #f5f3ff;">
+        <td>
+          <strong>A · Embedded portal</strong>
+          <div style="font-size:12px;color:var(--muted)">New <code>(portal)</code> route group in the existing Next.js app, separate session cookie, customer-scoped guards.</div>
+        </td>
+        <td><span class="pill pill-good">~6 days</span></td>
+        <td><span class="pill pill-good">$0</span></td>
+        <td><span class="pill pill-good">Good</span></td>
+        <td><span class="pill pill-good">Strong with 2FA</span></td>
+        <td><span class="pill pill-good">★ chosen</span></td>
+      </tr>
+      <tr>
+        <td>
+          <strong>B · Separate Next.js app</strong>
+          <div style="font-size:12px;color:var(--muted)">Subdomain (<code>portal.regionalhealth.co.nz</code>), separate ECS service, shared DB.</div>
+        </td>
+        <td><span class="pill pill-mid">~10 days</span></td>
+        <td><span class="pill pill-mid">+1 ECS service</span></td>
+        <td><span class="pill pill-good">Excellent (own brand)</span></td>
+        <td><span class="pill pill-good">Strong</span></td>
+        <td>Good but premature — same code-base concerns can be solved with route groups + tests for now. Migrate later if customer count grows.</td>
+      </tr>
+      <tr>
+        <td>
+          <strong>C · Headless + Shopify/Medusa</strong>
+          <div style="font-size:12px;color:var(--muted)">Use Shopify as the storefront, sync customers/products/orders both ways via webhooks.</div>
+        </td>
+        <td><span class="pill pill-bad">~3-4 weeks</span></td>
+        <td><span class="pill pill-bad">~$50-300/mo + dev</span></td>
+        <td><span class="pill pill-good">Polished</span></td>
+        <td><span class="pill pill-good">Excellent</span></td>
+        <td>Overkill for a single-tenant B2B with one main customer today. Two sources of truth = data drift = late-night reconciliation.</td>
+      </tr>
+      <tr>
+        <td>
+          <strong>D · Magic-link only</strong>
+          <div style="font-size:12px;color:var(--muted)">No password — customer enters email, gets a one-time link, click to sign in.</div>
+        </td>
+        <td><span class="pill pill-good">~3 days</span></td>
+        <td><span class="pill pill-good">$0</span></td>
+        <td><span class="pill pill-mid">Slower repeat flow</span></td>
+        <td><span class="pill pill-mid">Email-bound</span></td>
+        <td>Simple, but every order requires a fresh email click. Email account compromise = portal compromise. Useful as a fallback path; not a primary.</td>
+      </tr>
+      <tr>
+        <td>
+          <strong>E · SSO via customer's IdP</strong>
+          <div style="font-size:12px;color:var(--muted)">Customer signs in with Google Workspace / Microsoft 365.</div>
+        </td>
+        <td><span class="pill pill-mid">~5 days + per-customer setup</span></td>
+        <td><span class="pill pill-good">$0</span></td>
+        <td><span class="pill pill-good">Excellent if they have it</span></td>
+        <td><span class="pill pill-good">Inherits IdP</span></td>
+        <td>Right answer for an enterprise customer with a real IdP. Add later as an option for customers who request it; not a blocker for v1.</td>
+      </tr>
+      <tr>
+        <td>
+          <strong>F · Read-only portal first</strong>
+          <div style="font-size:12px;color:var(--muted)">Phase 1: orders + invoices + stock are visible only. Phase 2: add ordering.</div>
+        </td>
+        <td><span class="pill pill-good">~3 days</span></td>
+        <td><span class="pill pill-good">$0</span></td>
+        <td><span class="pill pill-mid">Useful but partial</span></td>
+        <td><span class="pill pill-good">Strong (nothing to write)</span></td>
+        <td>Sensible if you're nervous about self-serve ordering. Easy to grow into Option A. <strong>Available as a fallback if you want it.</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout tip">
+    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="m16.24 16.24 2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="m16.24 7.76 2.83-2.83"/></svg></span>
+    <p>The chosen option (A) keeps SSO (E) and the read-only mode (F) as additive futures. You can ship A first, fold in customer-IdP SSO when an enterprise customer asks, and there is no architectural conflict.</p>
+  </div>
+</section>
+
+<!-- ───────────────────────── ARCHITECTURE ───────────────────────── -->
+<section>
+  <h2>
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg></span>
+    Architecture at a glance
+  </h2>
+  <p class="blurb">One Next.js app, two route groups, one database — but with strict isolation between customer and staff.</p>
+  <div class="arch">
+    <svg viewBox="0 0 920 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Architecture diagram">
+      <defs>
+        <linearGradient id="grad-staff" x1="0" x2="1">
+          <stop offset="0" stop-color="#4338ca"/><stop offset="1" stop-color="#7c3aed"/>
+        </linearGradient>
+        <linearGradient id="grad-portal" x1="0" x2="1">
+          <stop offset="0" stop-color="#0d9488"/><stop offset="1" stop-color="#0284c7"/>
+        </linearGradient>
+        <linearGradient id="grad-db" x1="0" x2="1">
+          <stop offset="0" stop-color="#0f172a"/><stop offset="1" stop-color="#312e81"/>
+        </linearGradient>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+        </marker>
+      </defs>
+
+      <!-- Staff -->
+      <rect x="40" y="30" rx="14" ry="14" width="220" height="60" fill="url(#grad-staff)"/>
+      <text x="150" y="58" font-family="Inter, system-ui" font-weight="700" font-size="15" fill="white" text-anchor="middle">Internal staff</text>
+      <text x="150" y="78" font-family="Inter, system-ui" font-weight="500" font-size="11" fill="rgba(255,255,255,.85)" text-anchor="middle">ADMIN · SALES · WAREHOUSE</text>
+
+      <!-- Customer -->
+      <rect x="660" y="30" rx="14" ry="14" width="220" height="60" fill="url(#grad-portal)"/>
+      <text x="770" y="58" font-family="Inter, system-ui" font-weight="700" font-size="15" fill="white" text-anchor="middle">Portal users</text>
+      <text x="770" y="78" font-family="Inter, system-ui" font-weight="500" font-size="11" fill="rgba(255,255,255,.85)" text-anchor="middle">CUSTOMER (one tenant per portal user)</text>
+
+      <!-- (app) -->
+      <rect x="40" y="140" rx="14" ry="14" width="280" height="100" fill="white" stroke="#cbd5e1" stroke-width="1.5"/>
+      <text x="180" y="166" font-family="Inter, system-ui" font-weight="700" font-size="14" fill="#0f172a" text-anchor="middle">app/(app)/…</text>
+      <text x="180" y="186" font-family="JetBrains Mono, monospace" font-size="11" fill="#475569" text-anchor="middle">requireRole(["ADMIN","SALES",…])</text>
+      <text x="180" y="208" font-family="Inter, system-ui" font-size="11" fill="#64748b" text-anchor="middle">staff cookie · iron-session</text>
+      <text x="180" y="226" font-family="Inter, system-ui" font-size="11" fill="#64748b" text-anchor="middle">products · POs · SOs · settings · reports</text>
+
+      <!-- (portal) -->
+      <rect x="600" y="140" rx="14" ry="14" width="280" height="100" fill="white" stroke="#cbd5e1" stroke-width="1.5"/>
+      <text x="740" y="166" font-family="Inter, system-ui" font-weight="700" font-size="14" fill="#0f172a" text-anchor="middle">app/(portal)/…</text>
+      <text x="740" y="186" font-family="JetBrains Mono, monospace" font-size="11" fill="#475569" text-anchor="middle">requirePortalSession()</text>
+      <text x="740" y="208" font-family="Inter, system-ui" font-size="11" fill="#64748b" text-anchor="middle">portal cookie · iron-session</text>
+      <text x="740" y="226" font-family="Inter, system-ui" font-size="11" fill="#64748b" text-anchor="middle">catalogue · cart · order history · 2FA</text>
+
+      <!-- DB -->
+      <rect x="320" y="290" rx="14" ry="14" width="280" height="60" fill="url(#grad-db)"/>
+      <text x="460" y="316" font-family="Inter, system-ui" font-weight="700" font-size="14" fill="white" text-anchor="middle">PostgreSQL (one schema, scoped queries)</text>
+      <text x="460" y="334" font-family="Inter, system-ui" font-size="11" fill="rgba(255,255,255,.7)" text-anchor="middle">Tenant · Customer · CustomerUser · Product · Sales­Order</text>
+
+      <!-- arrows -->
+      <line x1="150" y1="93" x2="180" y2="138" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+      <line x1="770" y1="93" x2="740" y2="138" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+      <line x1="180" y1="240" x2="380" y2="290" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+      <line x1="740" y1="240" x2="540" y2="290" stroke="#475569" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+      <!-- middleware band -->
+      <rect x="40" y="110" width="840" height="20" fill="rgba(67,56,202,.06)"/>
+      <text x="460" y="124" font-family="Inter, system-ui" font-weight="700" font-size="11" fill="#4338ca" text-anchor="middle">middleware.ts — separate cookie name + path-based gate</text>
+    </svg>
+  </div>
+  <ul>
+    <li><strong>Two cookies, two sessions.</strong> Staff use <code>nz_inv_session</code> (existing). Portal users use <code>nz_inv_portal</code>. They can't impersonate each other; logging into one doesn't log you out of the other.</li>
+    <li><strong>One database, scoped queries.</strong> Every portal query goes through <code>requirePortalSession()</code> which returns <code>{ customerId }</code>. Every read/write is filtered by that customerId. <code>assertCustomer(resourceCustomerId, sessionCustomerId)</code> mirrors the existing tenant guard pattern.</li>
+    <li><strong>Same deploy pipeline.</strong> Same Docker image, same ECS service, same RDS. No new infra to monitor.</li>
+  </ul>
+</section>
+
+<!-- ───────────────────────── WHAT CUSTOMERS DO ───────────────────────── -->
+<section>
+  <h2>
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span>
+    What a customer can do
+  </h2>
+  <p class="blurb">Five screens, in the order they meet them.</p>
+
+  <h3>1 · Sign-in screen</h3>
+  <p>Plain email + password, with a "Use a one-time link" fallback for customers who've forgotten their password. Branded for Regional Health.</p>
+  <div class="browser">
+    <div class="chrome"><div class="dots"><span></span><span></span><span></span></div><div class="url"><span class="url-lock">🔒</span> portal.regionalhealth.co.nz/login</div></div>
+    <div class="body ui-login">
+      <div class="panel">
+        <div class="brand">REGIONAL HEALTH · CUSTOMER PORTAL</div>
+        <h3>Sign in</h3>
+        <div class="sub">Welcome back. Sign in to view your products and place an order.</div>
+        <label>Work email</label>
+        <input class="input" value="procurement@chemistwarehouse.co.nz" disabled>
+        <label>Password</label>
+        <input class="input" value="••••••••••••" type="password" disabled>
+        <button class="btn">Sign in</button>
+        <div class="alt">
+          <a>Forgot your password?</a>
+          &nbsp;·&nbsp;
+          <a>Sign in with a one-time link</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>2 · Product catalogue at their price</h3>
+  <p>Customer-only view: SKU, name, the customer's <strong>price-group</strong> price (not your cost), live stock, and a <strong>+ Add</strong> button. Sortable, searchable, paginated.</p>
+  <div class="browser">
+    <div class="chrome"><div class="dots"><span></span><span></span><span></span></div><div class="url"><span class="url-lock">🔒</span> portal.regionalhealth.co.nz/products</div></div>
+    <div class="body ui-portal">
+      <div class="topbar">
+        <div class="logo"><span class="dot"></span> Regional Health</div>
+        <nav>
+          <a>Dashboard</a>
+          <a class="active">Products</a>
+          <a>Cart <span class="pill pill-info" style="margin-left:4px">2</span></a>
+          <a>Orders</a>
+          <a>Account</a>
+        </nav>
+        <div class="me"><div class="av">CW</div> Chemist&nbsp;Warehouse</div>
+      </div>
+      <div class="body" style="padding: 18px 22px;">
+        <h2 class="page-h">Products</h2>
+        <div class="grid">
+          <div class="prod">
+            <div class="thumb">💆</div>
+            <div>
+              <div class="name">Argan Hair Oil 100ml</div>
+              <div class="sku">HAR-001 · 65 in stock</div>
+            </div>
+            <div class="stock-col"></div>
+            <div class="price"><div class="nzd">$22.00</div><div class="ex">ex GST · wholesale</div></div>
+            <div class="add">+ Add</div>
+          </div>
+          <div class="prod">
+            <div class="thumb">🧴</div>
+            <div>
+              <div class="name">Hydrating Serum 30ml</div>
+              <div class="sku">SKN-001 · 50 in stock</div>
+            </div>
+            <div class="stock-col"></div>
+            <div class="price"><div class="nzd">$36.00</div><div class="ex">ex GST · wholesale</div></div>
+            <div class="add">+ Add</div>
+          </div>
+          <div class="prod">
+            <div class="thumb">💄</div>
+            <div>
+              <div class="name">Tinted Lip Balm</div>
+              <div class="sku">MKP-001 · 75 in stock</div>
+            </div>
+            <div class="stock-col"></div>
+            <div class="price"><div class="nzd">$11.50</div><div class="ex">ex GST · 12+ qty break</div></div>
+            <div class="add">+ Add</div>
+          </div>
+          <div class="prod" style="opacity:.55">
+            <div class="thumb">🧪</div>
+            <div>
+              <div class="name">Hask Argan Oil Shampoo 355ml</div>
+              <div class="sku">IB-1101 · Out of stock</div>
+            </div>
+            <div class="stock-col"></div>
+            <div class="price"><div class="nzd">$4.80</div><div class="ex">ex GST · wholesale</div></div>
+            <div class="add" style="background:#cbd5e1;color:#475569">Notify me</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:14px;color:var(--muted)">Pricing comes from the existing <code>PriceGroup</code> + <code>ProductPrice</code> tables — already built. The portal just renders what your sales reps already see when they price a customer's order.</p>
+
+  <h3>3 · Cart & checkout</h3>
+  <p>Standard B2B cart. The "Submit order" button creates a <code>DRAFT</code> SO server-side, scoped to that customer. Your sales team sees it appear in the internal app.</p>
+  <div class="browser">
+    <div class="chrome"><div class="dots"><span></span><span></span><span></span></div><div class="url"><span class="url-lock">🔒</span> portal.regionalhealth.co.nz/cart</div></div>
+    <div class="body ui-portal">
+      <div class="topbar">
+        <div class="logo"><span class="dot"></span> Regional Health</div>
+        <nav><a>Dashboard</a><a>Products</a><a class="active">Cart <span class="pill pill-info" style="margin-left:4px">3</span></a><a>Orders</a><a>Account</a></nav>
+        <div class="me"><div class="av">CW</div> Chemist&nbsp;Warehouse</div>
+      </div>
+      <div class="body" style="padding: 18px 22px;">
+        <h2 class="page-h">Your cart · 3 items</h2>
+        <div class="grid">
+          <div class="cart-row">
+            <div style="font-size:22px;text-align:center;">💆</div>
+            <div>
+              <div style="font-weight:700;font-size:14px">Argan Hair Oil 100ml</div>
+              <div class="sku" style="font-family:var(--font-mono);font-size:11px;color:var(--soft)">HAR-001</div>
+            </div>
+            <div class="qty"><button>−</button> 12 <button>+</button></div>
+            <div class="line-total">$264.00</div>
+            <div class="x">×</div>
+          </div>
+          <div class="cart-row">
+            <div style="font-size:22px;text-align:center;">🧴</div>
+            <div>
+              <div style="font-weight:700;font-size:14px">Hydrating Serum 30ml</div>
+              <div class="sku" style="font-family:var(--font-mono);font-size:11px;color:var(--soft)">SKN-001</div>
+            </div>
+            <div class="qty"><button>−</button> 6 <button>+</button></div>
+            <div class="line-total">$216.00</div>
+            <div class="x">×</div>
+          </div>
+          <div class="cart-row">
+            <div style="font-size:22px;text-align:center;">💄</div>
+            <div>
+              <div style="font-weight:700;font-size:14px">Tinted Lip Balm</div>
+              <div class="sku" style="font-family:var(--font-mono);font-size:11px;color:var(--soft)">MKP-001 · qty break: 12+ at $11.50</div>
+            </div>
+            <div class="qty"><button>−</button> 24 <button>+</button></div>
+            <div class="line-total">$276.00</div>
+            <div class="x">×</div>
+          </div>
+        </div>
+        <div class="totals">
+          <div class="row"><span>Subtotal (ex GST)</span><span>$756.00</span></div>
+          <div class="row"><span>GST 15%</span><span>$113.40</span></div>
+          <div class="row total"><span>Total</span><span>$869.40</span></div>
+        </div>
+        <button style="margin-top:14px;padding:12px 22px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:white;font-weight:700;border:0;border-radius:10px;font-size:14px;cursor:pointer">Submit order</button>
+        <span style="margin-left:14px;font-size:12px;color:var(--muted)">Submits as <strong>DRAFT</strong> for sales-team review.</span>
+      </div>
+    </div>
+  </div>
+
+  <h3>4 · Order history</h3>
+  <p>The customer sees only their own orders. Status pills mirror the internal SO state machine. PDF download for shipped invoices.</p>
+  <div class="browser">
+    <div class="chrome"><div class="dots"><span></span><span></span><span></span></div><div class="url"><span class="url-lock">🔒</span> portal.regionalhealth.co.nz/orders</div></div>
+    <div class="body ui-portal">
+      <div class="topbar">
+        <div class="logo"><span class="dot"></span> Regional Health</div>
+        <nav><a>Dashboard</a><a>Products</a><a>Cart</a><a class="active">Orders</a><a>Account</a></nav>
+        <div class="me"><div class="av">CW</div> Chemist&nbsp;Warehouse</div>
+      </div>
+      <div class="body" style="padding: 18px 22px;">
+        <h2 class="page-h">Your orders</h2>
+        <div class="grid">
+          <div class="order">
+            <div>
+              <div style="font-weight:700;font-size:14px">3 items · Tinted Lip Balm + 2 more</div>
+              <div class="lines"><span class="so">SO-000016</span> · submitted today</div>
+            </div>
+            <div class="when">Awaiting review</div>
+            <div class="total">$869.40</div>
+            <div><span class="order-pill order-pending">Pending</span></div>
+          </div>
+          <div class="order">
+            <div>
+              <div style="font-weight:700;font-size:14px">2 items · Argan Hair Oil + 1 more</div>
+              <div class="lines"><span class="so">SO-000015</span> · 06 May 2026</div>
+            </div>
+            <div class="when">Picked, ships tomorrow</div>
+            <div class="total">$1,402.00</div>
+            <div><span class="order-pill order-conf">Confirmed</span></div>
+          </div>
+          <div class="order">
+            <div>
+              <div style="font-weight:700;font-size:14px">5 items · Mineral Foundation + 4 more</div>
+              <div class="lines"><span class="so">SO-000009</span> · 28 Apr 2026</div>
+            </div>
+            <div class="when">Shipped 28 Apr · NZ Post 8927…</div>
+            <div class="total">$2,318.50</div>
+            <div><span class="order-pill order-shipped">Shipped</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>5 · Account &amp; security</h3>
+  <p>Where the customer manages their password, 2FA, backup codes, and shipping addresses. Audit log of recent sign-ins is visible to them so they can spot unauthorised access.</p>
+</section>
+
+<!-- ───────────────────────── ACCOUNT SETUP FLOW ───────────────────────── -->
+<section>
+  <h2>
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg></span>
+    Account setup walkthrough
+  </h2>
+  <p class="blurb">From "admin clicks Invite" to "customer places first order" — five steps, no surprises.</p>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h3>Admin invites the customer's contact</h3>
+      <p>Inside the internal app, your admin opens <strong>Settings → Customers → Chemist Warehouse → Portal Users</strong> and types the procurement contact's email. No password, no Drive link, no faff.</p>
+      <div class="browser">
+        <div class="chrome"><div class="dots"><span></span><span></span><span></span></div><div class="url">app/customers/cmw…/portal</div></div>
+        <div class="body admin">
+          <div class="panel">
+            <div class="breadcrumb">Customers › Chemist Warehouse › <strong style="color:white">Portal users</strong></div>
+            <h3>Invite a portal user</h3>
+            <div class="grid2">
+              <div>
+                <label>Work email</label>
+                <input class="input" value="procurement@chemistwarehouse.co.nz" disabled>
+              </div>
+              <div>
+                <label>Display name (optional)</label>
+                <input class="input" value="Procurement team" disabled>
+              </div>
+            </div>
+            <label>Permissions</label>
+            <div style="display:flex;gap:14px;font-size:12px;color:#cbd5e1;margin-top:6px">
+              <label style="display:inline-flex;align-items:center;gap:6px;font-weight:400;"><input type="checkbox" checked disabled> Place orders</label>
+              <label style="display:inline-flex;align-items:center;gap:6px;font-weight:400;"><input type="checkbox" checked disabled> View invoices</label>
+              <label style="display:inline-flex;align-items:center;gap:6px;font-weight:400;"><input type="checkbox" disabled> Manage users</label>
+            </div>
+            <div class="btnrow">
+              <button class="btn primary">Send invitation</button>
+              <button class="btn ghost">Cancel</button>
+            </div>
+            <div class="invitations">
+              <div class="row head"><div>Email</div><div>Status</div><div>Sent</div><div></div></div>
+              <div class="row"><div>warehouse@chemistwarehouse.co.nz</div><div><span class="pill accepted">Accepted</span></div><div>2 May 2026</div><div>•••</div></div>
+              <div class="row"><div>buyer@chemistwarehouse.co.nz</div><div><span class="pill pending">Invited</span></div><div>5 May 2026</div><div>•••</div></div>
+              <div class="row"><div>jane@chemistwarehouse.co.nz</div><div><span class="pill expired">Expired</span></div><div>28 Apr 2026</div><div>•••</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p style="margin-top:6px"><span class="pill pill-info">Audit logged</span> Invitations record <em>who</em> sent them and <em>when</em>. Expired invitations stop working after 24h; resending generates a fresh token.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h3>Customer accepts the invite + sets a password</h3>
+      <p>The invitation email contains a one-time link <code>portal.regionalhealth.co.nz/accept-invite?token=…</code> with a 24-hour expiry. Token is single-use; clicking again returns "invitation already used".</p>
+      <p>Password requirements (enforced both client-side and on the server):</p>
+      <ul>
+        <li>Minimum 12 characters.</li>
+        <li>Must not appear in the <a href="https://haveibeenpwned.com/Passwords">HaveIBeenPwned password list</a> (we check k-anonymity hash, no password ever leaves the server).</li>
+        <li>Stored as <strong>bcrypt cost 12</strong> — same algorithm your staff accounts use, but at a higher work factor since portal accounts cross the public internet.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h3>Set up two-factor authentication</h3>
+      <p>This is the next screen, immediately after password creation. <strong>2FA is opt-out, not opt-in</strong> — they have to click "skip for now" if they don't want it, and the dashboard nags them every login until they turn it on.</p>
+      <div class="browser">
+        <div class="chrome"><div class="dots"><span></span><span></span><span></span></div><div class="url"><span class="url-lock">🔒</span> portal.regionalhealth.co.nz/setup-2fa</div></div>
+        <div class="body ui-2fa">
+          <div class="panel">
+            <h3>Set up two-factor authentication</h3>
+            <div class="sub">Open your authenticator app (Google Authenticator, 1Password, Authy, Microsoft Authenticator) and scan the code below.</div>
+            <div class="qrwrap">
+              <!-- Faux QR: a 21×21 grid of black/white cells -->
+              <div class="qr">
+                <!-- top-left finder -->
+                <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div class="w"></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+                <div></div><div class="w"></div><div class="w"></div><div class="w"></div><div class="w"></div><div class="w"></div><div></div><div class="w"></div><div></div><div></div><div class="w"></div><div></div><div class="w"></div><div></div><div class="w"></div><div class="w"></div><div class="w"></div><div class="w"></div><div class="w"></div><div></div><div></div>
+                <div></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div></div>
+                <div></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div><div class="w"></div><div></div><div class="w"></div><div></div><div class="w"></div><div></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div class="w"></div><div></div>
+                <div></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div class="w"></div><div></div><div></div><div></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div><div></div>
+                <div></div><div class="w"></div><div class="w"></div><div class="w"></div><div class="w"></div><div class="w"></div><div></div><div class="w"></div><div></div><div class="w"></div><div></div><div class="w"></div><div></div><div class="w"></div><div></div><div class="w"></div><div class="w"></div><div class="w"></div><div class="w"></div><div class="w"></div><div></div>
+                <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div class="w"></div><div></div><div class="w"></div><div></div><div class="w"></div><div></div><div class="w"></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+                <div class="w"></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div></div><div class="w"></div><div></div><div class="w"></div><div></div><div></div><div class="w"></div>
+                <div></div><div></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div class="w"></div><div></div><div></div><div class="w"></div><div></div><div class="w"></div><div></div><div></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div>
+                <div class="w"></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div><div class="w"></div><div></div><div class="w"></div><div></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div></div>
+                <div></div><div class="w"></div><div></div><div></div><div></div><div></div><div class="w"></div><div class="w"></div><div></div><div></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div><div class="w"></div><div></div><div class="w"></div><div></div><div></div>
+                <div class="w"></div><div></div><div class="w"></div><div></div><div class="w"></div><div></div><div></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div><div></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div><div class="w"></div>
+                <div></div><div></div><div></div><div></div><div></div><div></div><div class="w"></div><div></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div><div></div><div></div>
+                <div class="w"></div><div></div><div class="w"></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div>
+                <div></div><div class="w"></div><div></div><div></div><div class="w"></div><div></div><div class="w"></div><div></div><div></div><div></div><div></div><div></div><div class="w"></div><div></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div>
+                <!-- bottom-left finder -->
+                <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+                <div></div><div class="w"></div><div class="w"></div><div class="w"></div><div class="w"></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+                <div></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+                <div></div><div class="w"></div><div></div><div></div><div></div><div class="w"></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+                <div></div><div class="w"></div><div class="w"></div><div class="w"></div><div class="w"></div><div class="w"></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+                <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
+              </div>
+            </div>
+            <div style="text-align:center;font-size:12px;color:rgba(255,255,255,.65);margin-top:-6px;margin-bottom:14px">Or enter this code manually: <span style="font-family:var(--font-mono);color:white;letter-spacing:.05em">JBSW Y3DP EHPK 3PXP</span></div>
+            <label style="font-size:12px;color:rgba(255,255,255,.78);display:block;margin-bottom:6px;font-weight:600">Enter the 6-digit code from your app</label>
+            <div class="otp">
+              <input value="2"><input value="9"><input value="4"><input value="1"><input value="8"><input value="7">
+            </div>
+            <button style="width:100%;padding:10px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:white;font-weight:700;font-size:13px;border:0;border-radius:8px;cursor:pointer;margin-top:10px">Verify &amp; enable 2FA</button>
+            <div style="text-align:center;font-size:12px;color:rgba(255,255,255,.55);margin-top:10px"><a style="color:rgba(255,255,255,.7)">I'll do this later</a></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h3>Save backup codes</h3>
+      <p>Right after 2FA is verified we display 8 single-use backup codes. The customer must tick "I've saved these somewhere safe" to continue. They're stored as bcrypt hashes server-side — we can verify but never display them again.</p>
+      <div class="browser">
+        <div class="chrome"><div class="dots"><span></span><span></span><span></span></div><div class="url"><span class="url-lock">🔒</span> portal.regionalhealth.co.nz/setup-2fa/backup-codes</div></div>
+        <div class="body ui-2fa">
+          <div class="panel">
+            <h3>Save these backup codes</h3>
+            <div class="sub">If you lose your authenticator app, any one of these codes will get you back in. Each code can only be used once. Print them, save them in 1Password, take a photo.</div>
+            <div class="codes">
+              <div>2K9-PT4-7XR</div>
+              <div>9VM-RQ8-WCD</div>
+              <div>L4N-EHJ-7BG</div>
+              <div>WP3-FT2-MVA</div>
+              <div>YC5-XT8-N9P</div>
+              <div>RB6-LC2-FPH</div>
+              <div>U8F-Q7M-K3V</div>
+              <div>JT3-NS4-W92</div>
+            </div>
+            <div style="display:flex;gap:8px;font-size:12px;color:rgba(255,255,255,.78);margin-top:8px;align-items:center">
+              <input type="checkbox" checked disabled>
+              <span>I've saved these codes somewhere safe</span>
+            </div>
+            <button style="width:100%;padding:10px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:white;font-weight:700;font-size:13px;border:0;border-radius:8px;cursor:pointer;margin-top:14px">Continue to portal</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <h3>Place the first order</h3>
+      <p>Customer lands on the dashboard, sees a tour-style banner explaining the catalogue → cart → submit flow. From here on, every login goes: email → password → 6-digit code → portal home.</p>
+      <p>Subsequent logins from the same browser stay signed in for <strong>24 hours of inactivity, max 30 days</strong>. The session cookie is HTTPS-only with <code>SameSite=Lax</code>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────── SAFETY DEEP DIVE ───────────────────────── -->
+<section>
+  <h2>
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+    Safety &amp; 2FA, in plain English
+  </h2>
+  <p class="blurb">A defensible posture for a B2B portal that touches real money.</p>
+
+  <h3>The five safety layers</h3>
+  <table>
+    <thead><tr><th>Layer</th><th>What it does</th><th>Standard</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Password</td>
+        <td>Stops casual attackers and credential reuse from prior breaches.</td>
+        <td>bcrypt cost 12, min 12 chars, HIBP-checked</td>
+      </tr>
+      <tr>
+        <td>TOTP 2FA</td>
+        <td>Stops anyone holding a stolen password — they also need the customer's phone.</td>
+        <td>RFC 6238 (Google Authenticator standard), SHA-1, 6 digits, 30-second window</td>
+      </tr>
+      <tr>
+        <td>Backup codes</td>
+        <td>Recovery path when the customer loses their phone — and a softer alternative to "email the admin".</td>
+        <td>8 single-use codes, bcrypt-hashed at rest</td>
+      </tr>
+      <tr>
+        <td>Rate limiting</td>
+        <td>Stops brute-force on password and 2FA endpoints.</td>
+        <td>5 attempts / 15 min / IP (login), 10 attempts / 15 min / account (2FA)</td>
+      </tr>
+      <tr>
+        <td>Audit log</td>
+        <td>Both you and the customer can see every login, 2FA attempt, password change, invitation acceptance.</td>
+        <td>Append-only, retention 12 months</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Session policy</h3>
+  <ul>
+    <li><strong>Cookie name:</strong> <code>nz_inv_portal</code> (separate from staff cookie <code>nz_inv_session</code>).</li>
+    <li><strong>Flags:</strong> <code>HttpOnly</code> · <code>Secure</code> · <code>SameSite=Lax</code> · <code>Path=/</code>.</li>
+    <li><strong>Lifetime:</strong> 24h sliding (touched on every authenticated request), 30-day absolute max.</li>
+    <li><strong>Logout:</strong> destroys the session server-side and unsets the cookie. Logging out one device doesn't affect others.</li>
+  </ul>
+
+  <h3>Operational guardrails</h3>
+  <ul>
+    <li><strong>Invite expiry:</strong> 24-hour, single-use, replaceable. Expired invites can be reissued from the admin panel.</li>
+    <li><strong>Account lockout:</strong> after 10 consecutive failed 2FA attempts in 15 minutes, the account locks for an hour. Admin can clear early.</li>
+    <li><strong>Lost device:</strong> use a backup code to sign in, then re-enrol 2FA. If <em>all</em> backup codes are exhausted, an admin can reset 2FA from the internal app — every reset is audit-logged with who-did-it.</li>
+    <li><strong>No self-signup.</strong> The login page does not link to a "Create account" page. The only way in is via an admin's invitation.</li>
+    <li><strong>Cost prices stay invisible.</strong> Portal queries select <code>sellPriceNzd</code> only. <code>costNzd</code> never leaves the server.</li>
+    <li><strong>Customer scoping.</strong> Every portal action begins with <code>const session = await requirePortalSession(); …assertCustomer(row.customerId, session.customerId)</code>. Same proven pattern as the staff app's <code>assertTenant</code>.</li>
+  </ul>
+
+  <div class="callout warn">
+    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M21.73 18.05a2 2 0 0 1-1.74 3H4.01a2 2 0 0 1-1.74-3L10.26 4.05a2 2 0 0 1 3.48 0Z"/></svg></span>
+    <p><strong>What 2FA is <em>not</em>:</strong> SMS-based. We don't use SMS for 2FA — SIM swap attacks have made it the weakest mainstream factor. Authenticator apps (TOTP) are free, easy, and dramatically stronger.</p>
+  </div>
+
+  <h3>Future upgrade path: passkeys / WebAuthn</h3>
+  <p>
+    Phase 3 adds support for <strong>passkeys</strong> (WebAuthn) as a 2FA factor — the user holds their phone or fingerprint reader, and the browser handles the cryptography. No 6-digit code to type, phishing-resistant by design. Once shipped, customers can pick "Authenticator app or passkey" per device. We won't lead with this for v1 because authenticator apps already cover the safety bar and are universally familiar.
+  </p>
+</section>
+
+<!-- ───────────────────────── ROADMAP ───────────────────────── -->
+<section>
+  <h2>
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="12" x2="2" y2="12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" y1="16" x2="6.01" y2="16"/><line x1="10" y1="16" x2="10.01" y2="16"/></svg></span>
+    Implementation roadmap
+  </h2>
+  <p class="blurb">Three phases, ~6 working days for v1, low-risk increments.</p>
+
+  <div class="roadmap">
+    <div class="phase">
+      <div class="head"><div class="num">1</div><h4>Auth + catalogue + draft orders</h4></div>
+      <div class="meta">~3 days · ships v1</div>
+      <ul>
+        <li>Schema: <code>CustomerUser</code>, <code>PortalInvitation</code>, <code>PortalSession</code> tables; FK to <code>Customer</code>.</li>
+        <li><code>(portal)</code> route group, separate cookie, <code>requirePortalSession</code> helper, middleware allowlist for <code>/portal/*</code>.</li>
+        <li>Login + invite-acceptance flow, password rules, HIBP check.</li>
+        <li>Catalogue page with price-group resolution (reuses <code>upsertSalesOrder</code> price-resolution logic).</li>
+        <li>Cart + submit-as-DRAFT.</li>
+        <li>Order history (customer-scoped).</li>
+        <li>Admin Settings → Customer → Portal Users tab, invite + revoke.</li>
+        <li>Tests: portal RBAC pin, session helpers, customer-scoping guards.</li>
+      </ul>
+    </div>
+    <div class="phase">
+      <div class="head"><div class="num">2</div><h4>2FA, audit log, polish</h4></div>
+      <div class="meta">~2 days · ships v1.1</div>
+      <ul>
+        <li>TOTP setup wizard (QR + manual code).</li>
+        <li>Backup codes (generate, hash, single-use).</li>
+        <li>2FA challenge on login.</li>
+        <li>Account → Security page (rotate password, regenerate backup codes, view recent sign-ins).</li>
+        <li><code>AuditLog</code> table + portal-side viewer.</li>
+        <li>Rate limiting on login &amp; 2FA endpoints.</li>
+        <li>Email send: invitation, password-reset, sign-in-from-new-device alert.</li>
+      </ul>
+    </div>
+    <div class="phase">
+      <div class="head"><div class="num">3</div><h4>Future polish (optional)</h4></div>
+      <div class="meta">~1-3 days · ad-hoc</div>
+      <ul>
+        <li>WebAuthn / passkeys as a 2FA factor.</li>
+        <li>SAML / OIDC SSO for enterprise customers (Option E).</li>
+        <li>Reorder-from-history button (clones an SO into a new DRAFT).</li>
+        <li>Customer-self-service shipping addresses.</li>
+        <li>Branded subdomain (move to Option B without changing app code).</li>
+        <li>Push notifications for order status changes.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────── OPEN QUESTIONS ───────────────────────── -->
+<section>
+  <h2>
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></span>
+    Open questions for you
+  </h2>
+  <p class="blurb">Decide these before any code lands. None are technical blockers — they shape the policy.</p>
+
+  <ol>
+    <li><strong>One portal user per customer, or many?</strong>
+      <br><em>Recommendation:</em> many. Schema supports both at the same cost; supports staff turnover and multi-buyer teams. <span class="pill pill-info">low risk</span></li>
+    <li><strong>Can portal customers <em>edit</em> a draft order after submitting, or only cancel?</strong>
+      <br><em>Recommendation:</em> edit while DRAFT, cancel any time before CONFIRMED. After CONFIRMED, only your sales team can change it. <span class="pill pill-info">low risk</span></li>
+    <li><strong>Self-confirm at any value, or always sales-team review?</strong>
+      <br><em>Recommendation:</em> always sales-team review for v1. Add an "auto-confirm under $X" toggle later if Chemist Warehouse asks. <span class="pill pill-mid">policy choice</span></li>
+    <li><strong>Should portal customers see <em>your</em> stock counts (with 0 = "out of stock"), or just "available / not available"?</strong>
+      <br><em>Recommendation:</em> show actual counts — they're useful for procurement planning, and you're not exposing anything sensitive. <span class="pill pill-info">low risk</span></li>
+    <li><strong>QBO sync at submit, or at confirm?</strong>
+      <br><em>Recommendation:</em> at confirm. Drafts shouldn't generate QBO invoices. <span class="pill pill-info">low risk</span></li>
+    <li><strong>Email service:</strong> you have <code>resend</code> already in <code>package.json</code>. OK to use for invitations, password resets, 2FA alerts? Otherwise pick another (SES, Postmark). <span class="pill pill-info">low risk</span></li>
+    <li><strong>Subdomain or path?</strong> <code>portal.regionalhealth.co.nz</code> vs <code>regionalhealth.co.nz/portal</code>?
+      <br><em>Recommendation:</em> path for v1 (simpler DNS, same SSL cert). Move to subdomain later if you brand the portal separately. <span class="pill pill-info">low risk</span></li>
+    <li><strong>Public-self-signup?</strong>
+      <br><em>Recommendation:</em> hard no. Invite-only protects you from spam accounts, scrapers, and competitor reconnaissance. <span class="pill pill-info">strongly recommended</span></li>
+  </ol>
+</section>
+
+<!-- ───────────────────────── APPENDIX ───────────────────────── -->
+<section class="tight">
+  <h2>
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span>
+    Appendix · schema sketch
+  </h2>
+  <p class="blurb">Three new tables. Existing tables untouched.</p>
+  <pre style="background: var(--code-bg); color: var(--code-fg); padding: 18px; border-radius: 12px; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.7; overflow-x:auto;">model CustomerUser {
+  id            String   @id @default(cuid())
+  customerId    String
+  customer      Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  email         String   @unique
+  passwordHash  String
+  name          String?
+  // Permissions inside that customer's scope
+  canPlaceOrders Boolean @default(true)
+  canViewInvoices Boolean @default(true)
+  canManageUsers  Boolean @default(false)
+  // 2FA
+  totpSecretEnc String?              // encrypted at rest
+  totpEnabled   Boolean  @default(false)
+  backupCodes   BackupCode[]
+  // Lifecycle
+  invitedById   String?              // User.id of the staff member who invited
+  acceptedAt    DateTime?
+  lockedUntil   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions      PortalSession[]
+  auditEvents   PortalAuditEvent[]
+  @@index([customerId])
+}
+
+model PortalInvitation {
+  id          String   @id @default(cuid())
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  email       String
+  tokenHash   String                  // single-use, 24h TTL
+  invitedById String?
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime @default(now())
+  @@index([customerId, expiresAt])
+}
+
+model BackupCode {
+  id              String       @id @default(cuid())
+  customerUserId  String
+  user            CustomerUser @relation(fields: [customerUserId], references: [id], onDelete: Cascade)
+  codeHash        String                  // bcrypt
+  usedAt          DateTime?
+  createdAt       DateTime @default(now())
+  @@index([customerUserId])
+}
+
+model PortalAuditEvent {
+  id              String       @id @default(cuid())
+  customerUserId  String?
+  user            CustomerUser? @relation(fields: [customerUserId], references: [id], onDelete: SetNull)
+  customerId      String?                 // for cross-user "all events for this customer" queries
+  type            String                  // SIGN_IN, SIGN_IN_FAIL, 2FA_PASS, 2FA_FAIL, PASSWORD_RESET, etc.
+  ip              String?
+  userAgent       String?
+  meta            Json?
+  createdAt       DateTime @default(now())
+  @@index([customerUserId, createdAt])
+  @@index([customerId, createdAt])
+}</pre>
+  <p style="font-size:13px;color:var(--muted);margin-top:6px">No changes to <code>Customer</code>, <code>SalesOrder</code>, <code>Product</code>, etc. The portal is purely additive at the schema level.</p>
+</section>
+
+<!-- ───────────────────────── NEXT ───────────────────────── -->
+<section>
+  <h2>
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></span>
+    What I need from you to start building
+  </h2>
+  <p>Three answers and I can ship Phase 1 in a few focused days:</p>
+  <ol>
+    <li><strong>Yes/no on the recommendation</strong> (Option A — embedded portal, invite-only, TOTP 2FA from day one).</li>
+    <li><strong>Answers to the eight open questions</strong> in the section above. Most of them have a recommended default — agree and I'll go with that.</li>
+    <li><strong>The first email address to invite</strong> as a portal user once Phase 1 is up — so we can dogfood with a real Chemist Warehouse contact instead of a placeholder.</li>
+  </ol>
+  <p>Reply with any of (a) "yes, defaults" — I start building, (b) point-by-point answers, or (c) questions / objections to anything in this doc.</p>
+</section>
+
+</main>
+
+<footer>
+  Regional Software · Customer order portal plan · drafted 2026-05-06 ·
+  visual companion to the underlying technical spec
+</footer>
+
+</body>
+</html>
