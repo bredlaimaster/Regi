@@ -1,0 +1,2076 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Regi · Tester Guide</title>
+<style>
+  :root {
+    --bg: #f7f8fa;
+    --panel: #ffffff;
+    --ink: #0f172a;
+    --ink-2: #334155;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --accent: #1d4ed8;
+    --accent-2: #2563eb;
+    --ok: #16a34a;
+    --warn: #d97706;
+    --bad: #dc2626;
+    --pink: #ec4899;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.55;
+    font-size: 16px;
+  }
+
+  /* sticky progress bar */
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    background: white;
+    border-bottom: 1px solid var(--line);
+    padding: 12px 24px;
+    display: flex; align-items: center; gap: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .topbar h1 { font-size: 18px; margin: 0; color: var(--accent); }
+  .progress-wrap {
+    flex: 1;
+    height: 14px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+    position: relative;
+  }
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent) 0%, #22c55e 100%);
+    transition: width 0.3s;
+    width: 0%;
+  }
+  .progress-label { font-weight: 600; font-size: 14px; min-width: 110px; text-align: right; }
+  .topbar button {
+    border: 1px solid var(--line);
+    background: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .topbar button:hover { background: #f1f5f9; }
+  .topbar button.danger { color: var(--bad); border-color: #fecaca; }
+  .topbar button.danger:hover { background: #fef2f2; }
+
+  main { max-width: 1000px; margin: 0 auto; padding: 24px; }
+
+  .intro {
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+  }
+  .intro h2 { font-size: 28px; margin: 0 0 8px; }
+  .intro p { margin: 8px 0; }
+  .intro ul { padding-left: 22px; }
+  .intro li { margin: 6px 0; }
+  .intro .icon-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px;
+  }
+  .intro .icon-row .ic {
+    background: #f1f5f9; padding: 12px; border-radius: 8px; text-align: center;
+  }
+  .intro .icon-row .ic .em { font-size: 30px; display: block; margin-bottom: 4px; }
+  .intro .icon-row .ic .lbl { font-size: 12px; color: var(--muted); }
+
+  /* Section card */
+  .section {
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    margin-bottom: 22px;
+    overflow: hidden;
+  }
+  .section-header {
+    background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+    border-bottom: 1px solid var(--line);
+    padding: 18px 24px;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .section-header h3 { font-size: 19px; margin: 0; flex: 1; }
+  .section-header .num {
+    background: var(--accent);
+    color: white;
+    font-weight: 700;
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .section-header .pill {
+    font-size: 12px;
+    background: white;
+    color: var(--muted);
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    font-weight: 500;
+  }
+  .section-header .pill.done {
+    background: #dcfce7; color: #166534; border-color: #bbf7d0;
+  }
+  .section-header .chev {
+    font-size: 18px; color: var(--muted); transition: transform 0.2s;
+  }
+  .section.collapsed .section-header .chev { transform: rotate(-90deg); }
+  .section.collapsed .section-body { display: none; }
+
+  .section-body { padding: 16px 24px 24px; }
+  .section-body p.lead { color: var(--ink-2); margin: 0 0 12px; }
+
+  /* Mock UI screenshot */
+  .mock {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: white;
+    margin: 14px 0;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  }
+  .mock-toolbar {
+    background: #1e293b; color: white; padding: 6px 10px; font-size: 12px; display: flex; gap: 6px; align-items: center;
+  }
+  .mock-toolbar .dot { width: 10px; height: 10px; border-radius: 50%; background: #475569; }
+  .mock-toolbar .url { background: #334155; padding: 2px 8px; border-radius: 4px; flex: 1; font-family: monospace; font-size: 11px; margin-left: 6px; }
+  .mock-content { padding: 14px 18px; font-size: 13px; }
+  .mock-row { display: flex; gap: 12px; align-items: center; padding: 6px 0; border-bottom: 1px dashed #e2e8f0; }
+  .mock-row:last-child { border-bottom: 0; }
+  .mock-row.head { font-weight: 600; color: var(--muted); font-size: 11px; text-transform: uppercase; }
+  .mock-btn {
+    display: inline-block; padding: 4px 10px; border-radius: 5px;
+    background: var(--accent); color: white; font-size: 12px; font-weight: 500;
+  }
+  .mock-btn.outline { background: white; border: 1px solid var(--line); color: var(--ink); }
+  .mock-btn.warn { background: var(--warn); }
+  .mock-btn.bad { background: var(--bad); }
+  .mock-btn.ok { background: var(--ok); }
+  .mock-input {
+    border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; font-size: 12px; min-width: 100px;
+    background: #f8fafc;
+  }
+  .mock-tag {
+    display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 999px;
+    background: #f1f5f9; color: var(--muted); border: 1px solid var(--line);
+  }
+  .mock-tag.green { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+  .mock-tag.amber { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+  .mock-tag.red { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+
+  /* Test card */
+  .test {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 14px 0;
+    background: #fafbfd;
+  }
+  .test.done { border-color: #bbf7d0; background: #f0fdf4; }
+  .test h4 {
+    margin: 0 0 6px;
+    font-size: 15px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .test h4 .tnum {
+    background: var(--accent); color: white; padding: 1px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;
+  }
+  .test .why {
+    color: var(--muted); font-size: 13px; margin: 4px 0 10px;
+  }
+
+  .step {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 4px 0;
+  }
+  .step input[type="checkbox"] {
+    margin-top: 4px;
+    width: 18px; height: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+    accent-color: var(--accent);
+  }
+  .step label { flex: 1; font-size: 14px; cursor: pointer; }
+  .step input[type="checkbox"]:checked + label { color: var(--muted); text-decoration: line-through; }
+
+  .expect {
+    background: #eff6ff;
+    border-left: 4px solid var(--accent);
+    padding: 8px 12px;
+    border-radius: 0 6px 6px 0;
+    font-size: 13px;
+    margin: 10px 0;
+  }
+  .expect strong { color: var(--accent); }
+  .warn-box {
+    background: #fef3c7;
+    border-left: 4px solid var(--warn);
+    padding: 8px 12px;
+    border-radius: 0 6px 6px 0;
+    font-size: 13px;
+    margin: 10px 0;
+  }
+  .warn-box strong { color: var(--warn); }
+  .bug-box {
+    background: #fee2e2;
+    border-left: 4px solid var(--bad);
+    padding: 8px 12px;
+    border-radius: 0 6px 6px 0;
+    font-size: 13px;
+    margin: 10px 0;
+  }
+  .bug-box strong { color: var(--bad); }
+
+  .notes { margin-top: 12px; }
+  .notes label {
+    display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; font-weight: 600;
+  }
+  .notes textarea {
+    width: 100%;
+    min-height: 60px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-family: inherit;
+    font-size: 13.5px;
+    background: white;
+    resize: vertical;
+  }
+  .notes textarea:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+  }
+
+  .role-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-left: 6px;
+  }
+  .role-tag.admin { background: #fef3c7; color: #92400e; }
+  .role-tag.sales { background: #dcfce7; color: #166534; }
+  .role-tag.warehouse { background: #ede9fe; color: #5b21b6; }
+  .role-tag.mobile { background: #fce7f3; color: #9d174d; }
+
+  .toc {
+    background: white; border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px 20px; margin-bottom: 22px;
+  }
+  .toc h3 { margin: 0 0 10px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 24px; }
+  .toc li { margin: 3px 0; font-size: 14px; break-inside: avoid; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  .summary-card {
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 22px 0;
+    text-align: center;
+  }
+  .summary-card h3 { margin: 0 0 6px; font-size: 22px; }
+  .summary-card p { margin: 4px 0; opacity: 0.9; font-size: 14px; }
+  .summary-card .big-num { font-size: 56px; font-weight: 700; line-height: 1; margin: 12px 0 8px; }
+
+  /* ===== AI fix flag (injected into every test) ===== */
+  .ai-fix {
+    margin-top: 14px;
+    border: 1px solid #e9d5ff;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #faf5ff 0%, #ffffff 70%);
+    overflow: hidden;
+    transition: all 0.2s ease;
+    position: relative;
+  }
+  .ai-fix label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .ai-fix input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    border: 2px solid #c084fc;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    flex-shrink: 0;
+    position: relative;
+    margin: 0;
+    transition: all 0.15s ease;
+  }
+  .ai-fix input[type="checkbox"]:hover {
+    border-color: #a855f7;
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.12);
+  }
+  .ai-fix input[type="checkbox"]:checked {
+    background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+    border-color: transparent;
+  }
+  .ai-fix input[type="checkbox"]:checked::after {
+    content: "✓";
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .ai-fix .ai-fix-icon {
+    font-size: 18px;
+    filter: drop-shadow(0 0 6px rgba(168,85,247,0.35));
+    transition: transform 0.3s ease;
+  }
+  .ai-fix .ai-fix-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    line-height: 1.3;
+  }
+  .ai-fix .ai-fix-text strong {
+    font-weight: 600;
+    color: #6b21a8;
+    font-size: 13.5px;
+  }
+  .ai-fix .ai-fix-text .ai-fix-sub {
+    font-size: 11.5px;
+    color: #9333ea;
+    opacity: 0.75;
+  }
+  /* When flagged */
+  .ai-fix.flagged {
+    border-color: #a855f7;
+    background: linear-gradient(135deg, #f3e8ff 0%, #faf5ff 80%);
+    box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.15), 0 6px 18px rgba(168, 85, 247, 0.18);
+  }
+  .ai-fix.flagged .ai-fix-text strong { color: #581c87; }
+  .ai-fix.flagged .ai-fix-icon {
+    transform: scale(1.15) rotate(-8deg);
+    filter: drop-shadow(0 0 8px rgba(168,85,247,0.7));
+  }
+  .test.ai-flagged {
+    border-color: #d8b4fe;
+    box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.12), 0 6px 24px rgba(168, 85, 247, 0.1);
+  }
+  .test.ai-flagged.done { border-color: #c4b5fd; }
+
+  /* Topbar AI-fix counter button */
+  .ai-fix-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+    color: white;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 0;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 2px 8px rgba(168, 85, 247, 0.3);
+    white-space: nowrap;
+  }
+  .ai-fix-counter:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(168, 85, 247, 0.45);
+  }
+  .ai-fix-counter.empty {
+    background: white;
+    color: #9333ea;
+    border: 1px solid #e9d5ff;
+    box-shadow: none;
+    cursor: default;
+  }
+  .ai-fix-counter.empty:hover { transform: none; box-shadow: none; }
+  .ai-fix-counter .ai-num {
+    background: rgba(255,255,255,0.25);
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-weight: 700;
+    min-width: 18px;
+    text-align: center;
+  }
+  .ai-fix-counter.empty .ai-num {
+    background: #f3e8ff;
+    color: #9333ea;
+  }
+
+  @media print {
+    .topbar { position: static; box-shadow: none; }
+    .section.collapsed .section-body { display: block !important; }
+    .section { page-break-inside: avoid; box-shadow: none; }
+    .test { page-break-inside: avoid; }
+    .topbar button, .ai-fix-counter { display: none; }
+    .ai-fix { border-color: #c084fc !important; }
+    body { background: white; }
+  }
+
+  @media (max-width: 700px) {
+    .intro .icon-row { grid-template-columns: repeat(2, 1fr); }
+    .toc ol { columns: 1; }
+    .topbar { flex-wrap: wrap; }
+    .progress-label { width: 100%; text-align: left; }
+    main { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Regi · Tester Guide</h1>
+  <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+  <div class="progress-label" id="progressLabel">0 / 0 done</div>
+  <button class="ai-fix-counter empty" id="copyAiFixBtn" onclick="copyAiFixList()" title="Copy the list of bugs flagged for AI to fix">
+    <span>🪄</span><span class="ai-num" id="aiFixCount">0</span><span>flagged for AI</span>
+  </button>
+  <button onclick="expandAll()">Open all</button>
+  <button onclick="collapseAll()">Close all</button>
+  <button onclick="window.print()">Print</button>
+  <button class="danger" onclick="resetAll()">Reset</button>
+</div>
+
+<main>
+
+<section class="intro">
+  <h2>👋 Hey — welcome, tester!</h2>
+  <p>
+    This is a guided walk-through of the whole <strong>Regi</strong> app. You don't need to know
+    anything about it — every test tells you exactly what to click and what should happen.
+    Your job is to:
+  </p>
+  <ul>
+    <li>Click through each test, in order if you can.</li>
+    <li><strong>Tick the box</strong> when you've done a step.</li>
+    <li>If something looks wrong, weird, ugly, slow, or breaks — write a quick note in the
+      <strong>"Bug notes"</strong> box for that test. No need to be neat. Anything you write
+      here is saved automatically in the browser.</li>
+    <li>If you finish a section without finding anything, that's also useful — leave the notes empty.</li>
+  </ul>
+
+  <div class="icon-row">
+    <div class="ic"><span class="em">✅</span><span class="lbl">Tick the box when done</span></div>
+    <div class="ic"><span class="em">💡</span><span class="lbl">Blue boxes = what to expect</span></div>
+    <div class="ic"><span class="em">⚠️</span><span class="lbl">Yellow boxes = tricky bits</span></div>
+    <div class="ic"><span class="em">🐛</span><span class="lbl">Red boxes = known bugs to try</span></div>
+  </div>
+
+  <p style="margin-top:18px"><strong>Your progress is saved in this browser.</strong> Closing the tab
+  is fine — when you come back the boxes will still be ticked. Use the "Reset" button only if you
+  want to start over.</p>
+</section>
+
+<div class="toc">
+  <h3>What you'll be testing</h3>
+  <ol>
+    <li><a href="#s1">Sign in &amp; the navigation bar</a></li>
+    <li><a href="#s2">Dashboard</a></li>
+    <li><a href="#s3">Products</a></li>
+    <li><a href="#s4">Inventory &amp; stock adjustments</a></li>
+    <li><a href="#s5">Suppliers</a></li>
+    <li><a href="#s6">Customers</a></li>
+    <li><a href="#s7">Settings → Users</a></li>
+    <li><a href="#s8">Settings → Brands, Channels &amp; Territories</a></li>
+    <li><a href="#s9">Settings → Price Groups</a></li>
+    <li><a href="#s10">Settings → Tax</a></li>
+    <li><a href="#s11">Settings → Budgets</a></li>
+    <li><a href="#s12">Settings → Scheduled Reports</a></li>
+    <li><a href="#s13">Settings → QuickBooks</a></li>
+    <li><a href="#s14">Settings → Audit log</a></li>
+    <li><a href="#s15">Purchase Orders — create &amp; cancel</a></li>
+    <li><a href="#s16">Purchase Orders — full receive</a></li>
+    <li><a href="#s17">Purchase Orders — partial receive</a></li>
+    <li><a href="#s18">Sales Orders — create &amp; confirm</a></li>
+    <li><a href="#s19">Sales Orders — pick &amp; ship</a></li>
+    <li><a href="#s20">Proforma invoices</a></li>
+    <li><a href="#s21">Stock reservations</a></li>
+    <li><a href="#s22">Reports — open every one</a></li>
+    <li><a href="#s23">Reports — exports (CSV / Excel / PDF)</a></li>
+    <li><a href="#s24">Mobile PWA — install &amp; sign in</a></li>
+    <li><a href="#s25">Mobile — pick by barcode</a></li>
+    <li><a href="#s26">Mobile — receive by barcode</a></li>
+    <li><a href="#s27">Mobile — stocktake</a></li>
+    <li><a href="#s28">Edge cases &amp; known weirdness</a></li>
+  </ol>
+</div>
+
+<!-- ====== SECTION 1 · SIGN IN & NAV ====== -->
+<section class="section" id="s1">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">1</div>
+    <h3>Sign in &amp; the navigation bar</h3>
+    <div class="pill" data-section-pill>0 / 4</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">First we just want to make sure you can log in and the buttons on the side actually go places.</p>
+
+    <div class="mock">
+      <div class="mock-toolbar"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="url">http://&hellip;/login</div></div>
+      <div class="mock-content" style="padding: 30px; text-align: center; background: #f8fafc;">
+        <div style="background: white; border: 1px solid #e2e8f0; padding: 24px; border-radius: 8px; max-width: 320px; margin: 0 auto; text-align: left;">
+          <div style="font-weight: 600; font-size: 16px;">Sign in</div>
+          <div style="color: #64748b; font-size: 12px; margin-bottom: 12px;">Access your inventory workspace</div>
+          <div style="font-size: 12px;">Email</div>
+          <div class="mock-input" style="display:block; margin: 4px 0 10px;">you@example.com</div>
+          <div style="font-size: 12px;">Password</div>
+          <div class="mock-input" style="display:block; margin: 4px 0 14px;">••••••••</div>
+          <div class="mock-btn" style="display: block; text-align: center;">Sign in</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">1.1</span> Sign in works</h4>
+      <div class="why">Make sure you can actually get in with the credentials you were given.</div>
+      <div class="step"><input type="checkbox" id="s1-1-1"><label for="s1-1-1">Open the app URL.</label></div>
+      <div class="step"><input type="checkbox" id="s1-1-2"><label for="s1-1-2">Type your email + password and click <strong>Sign in</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s1-1-3"><label for="s1-1-3">You should land on the <strong>Dashboard</strong>.</label></div>
+      <div class="expect"><strong>What you should see:</strong> a page with "Dashboard" at the top and 4 little boxes (Open POs, Open SOs, Low stock, Stock value).</div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note placeholder="e.g. 'Took 5 seconds' or 'Wrong password gave a weird error'"></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">1.2</span> Bad password is rejected</h4>
+      <div class="why">Make sure typos don't accidentally let people in.</div>
+      <div class="step"><input type="checkbox" id="s1-2-1"><label for="s1-2-1">Sign out (top right or refresh).</label></div>
+      <div class="step"><input type="checkbox" id="s1-2-2"><label for="s1-2-2">Try to sign in with the wrong password.</label></div>
+      <div class="expect"><strong>What you should see:</strong> a red toast / message saying "Invalid email or password". The form should not let you in.</div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">1.3</span> Sidebar buttons all go somewhere</h4>
+      <div class="why">Quick click-through to confirm nothing is broken on the menu.</div>
+      <div class="step"><input type="checkbox" id="s1-3-1"><label for="s1-3-1">Click each menu item one at a time and check the page loads (no white screen, no "404", no error).</label></div>
+      <div class="step"><input type="checkbox" id="s1-3-2"><label for="s1-3-2">Items to click: Dashboard, Products, Inventory, Purchase Orders, Sales Orders, Proforma Invoices, Reservations, Suppliers, Customers, Reports, Settings.</label></div>
+      <div class="expect"><strong>What you should see:</strong> the active item highlighted in blue, the page title at the top changes, no "Forbidden" or crash.</div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">1.4</span> Light / dark theme toggle</h4>
+      <div class="why">There's a sun/moon button at the top — make sure it works.</div>
+      <div class="step"><input type="checkbox" id="s1-4-1"><label for="s1-4-1">Find the theme toggle in the top bar (sun or moon icon).</label></div>
+      <div class="step"><input type="checkbox" id="s1-4-2"><label for="s1-4-2">Click it. The whole page should flip to the other theme.</label></div>
+      <div class="step"><input type="checkbox" id="s1-4-3"><label for="s1-4-3">Refresh the page — it should remember your choice.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note placeholder="Anything that looks broken in dark mode? Bad colours? Hard to read?"></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 2 · DASHBOARD ====== -->
+<section class="section" id="s2">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">2</div>
+    <h3>Dashboard</h3>
+    <div class="pill" data-section-pill>0 / 3</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">The home page. Just check the numbers look right and the links work.</p>
+
+    <div class="mock">
+      <div class="mock-content">
+        <div style="display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 12px;">
+          <div style="border:1px solid #e2e8f0; border-radius:6px; padding:8px;"><div style="font-size:10px; color:#64748b;">OPEN POs</div><div style="font-size:22px; color:#1d4ed8;">12</div></div>
+          <div style="border:1px solid #e2e8f0; border-radius:6px; padding:8px;"><div style="font-size:10px; color:#64748b;">OPEN SOs</div><div style="font-size:22px; color:#1d4ed8;">7</div></div>
+          <div style="border:1px solid #fde68a; background:#fffbeb; border-radius:6px; padding:8px;"><div style="font-size:10px; color:#92400e;">LOW STOCK</div><div style="font-size:22px; color:#d97706;">3</div></div>
+          <div style="border:1px solid #e2e8f0; border-radius:6px; padding:8px;"><div style="font-size:10px; color:#64748b;">STOCK VALUE</div><div style="font-size:22px; color:#1d4ed8;">$84,210</div></div>
+        </div>
+        <div class="mock-row head"><span style="flex:1">Low stock</span><span>SKU</span><span>On hand</span></div>
+        <div class="mock-row"><span style="flex:1">Hask Argan Oil 100ml</span><span style="font-family:monospace; font-size:11px">HASK-ARG-100</span><span>2</span></div>
+      </div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">2.1</span> The 4 stat boxes show numbers</h4>
+      <div class="step"><input type="checkbox" id="s2-1-1"><label for="s2-1-1">Open the Dashboard (click the home icon or "Dashboard" in the menu).</label></div>
+      <div class="step"><input type="checkbox" id="s2-1-2"><label for="s2-1-2">Each of the 4 boxes shows a number — not blank, not "NaN", not "undefined".</label></div>
+      <div class="step"><input type="checkbox" id="s2-1-3"><label for="s2-1-3">If "Low stock" is more than 0, that box should be amber/orange (a warning colour), not blue.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">2.2</span> Clicking a stat box jumps to the right page</h4>
+      <div class="step"><input type="checkbox" id="s2-2-1"><label for="s2-2-1">Click "Open POs" — should take you to /purchase-orders.</label></div>
+      <div class="step"><input type="checkbox" id="s2-2-2"><label for="s2-2-2">Click "Open SOs" — should take you to /sales-orders.</label></div>
+      <div class="step"><input type="checkbox" id="s2-2-3"><label for="s2-2-3">Click "Low stock" — should take you to /inventory.</label></div>
+      <div class="step"><input type="checkbox" id="s2-2-4"><label for="s2-2-4">Click "Stock value" — should take you to /reports.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">2.3</span> Low stock + Top products tables render</h4>
+      <div class="step"><input type="checkbox" id="s2-3-1"><label for="s2-3-1">Below the boxes there are 2 tables: "Low stock" and "Top products — last 30 days".</label></div>
+      <div class="step"><input type="checkbox" id="s2-3-2"><label for="s2-3-2">Either they have rows in them, OR they say "All stock healthy" / "No sales yet". Both are fine — just no errors.</label></div>
+      <div class="step"><input type="checkbox" id="s2-3-3"><label for="s2-3-3">Click any product name in the Low stock table — it should open that product's page.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 3 · PRODUCTS ====== -->
+<section class="section" id="s3">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">3</div>
+    <h3>Products</h3>
+    <div class="pill" data-section-pill>0 / 7</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">Products are everything Regional Health sells — shampoo bottles, creams, etc. We're going to view, search, create, edit, price, image and delete one.</p>
+
+    <div class="mock">
+      <div class="mock-content">
+        <div style="display:flex; gap:8px; margin-bottom:8px;">
+          <div class="mock-input" style="flex:1">Search SKU or name…</div>
+          <div class="mock-btn">+ New product</div>
+        </div>
+        <div class="mock-row head"><span style="width:90px">SKU</span><span style="flex:1">Name</span><span style="width:80px">Stock</span><span style="width:80px">Sell price</span><span style="width:60px">Bin</span><span></span></div>
+        <div class="mock-row"><span style="font-family:monospace; font-size:11px; width:90px">HASK-ARG-100</span><span style="flex:1">Hask Argan Oil 100ml</span><span style="width:80px">42</span><span style="width:80px">$24.90</span><span style="width:60px; font-family:monospace; font-size:11px">F08B01</span><span class="mock-btn outline">Edit</span></div>
+      </div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">3.1</span> List loads + search works</h4>
+      <div class="step"><input type="checkbox" id="s3-1-1"><label for="s3-1-1">Click <strong>Products</strong> in the sidebar.</label></div>
+      <div class="step"><input type="checkbox" id="s3-1-2"><label for="s3-1-2">A list of products appears with columns: SKU, Name, Supplier, Stock, Sell price, Bin, Barcode, Edit.</label></div>
+      <div class="step"><input type="checkbox" id="s3-1-3"><label for="s3-1-3">Type something into the search box (e.g. "oil"). The list narrows down to matching items.</label></div>
+      <div class="step"><input type="checkbox" id="s3-1-4"><label for="s3-1-4">Clear the search — full list comes back.</label></div>
+      <div class="step"><input type="checkbox" id="s3-1-5"><label for="s3-1-5">If there are more than 50 products, scroll to the bottom — there should be page numbers.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">3.2</span> Create a brand-new product</h4>
+      <div class="why">We'll make a fake product called "Tester Test Cream" so you've got something to play with.</div>
+      <div class="step"><input type="checkbox" id="s3-2-1"><label for="s3-2-1">Click <strong>+ New product</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s3-2-2"><label for="s3-2-2">Fill in: SKU = <strong>TEST-001</strong>, Name = <strong>Tester Test Cream</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s3-2-3"><label for="s3-2-3">Fill in everything else you can: Unit (e.g. EA), Case qty (e.g. 12), Reorder point (e.g. 5), Supplier (pick one), Brand (pick one), Description, Notes, Bin location (e.g. F99X99), Unit barcode (e.g. 9999999999999), Case barcode.</label></div>
+      <div class="step"><input type="checkbox" id="s3-2-4"><label for="s3-2-4">Toggle "Tester" on, then off again. Toggle "Active" — leave it on.</label></div>
+      <div class="step"><input type="checkbox" id="s3-2-5"><label for="s3-2-5">Click the <strong>Pricing</strong> tab. Set the base sell price to <strong>19.99</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s3-2-6"><label for="s3-2-6">Click the <strong>Save</strong> / <strong>Create Product</strong> button at the bottom.</label></div>
+      <div class="expect"><strong>What you should see:</strong> a green "saved" toast, and you land back on the Products list with TEST-001 in it.</div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">3.3</span> Try to create a duplicate SKU (should fail)</h4>
+      <div class="step"><input type="checkbox" id="s3-3-1"><label for="s3-3-1">Click <strong>+ New product</strong> again.</label></div>
+      <div class="step"><input type="checkbox" id="s3-3-2"><label for="s3-3-2">Type the same SKU as before: <strong>TEST-001</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s3-3-3"><label for="s3-3-3">Type any name. Click Save.</label></div>
+      <div class="expect"><strong>What you should see:</strong> a red error toast saying SKU already exists. The product should NOT be created.</div>
+      <div class="warn-box"><strong>⚠️ Watch for:</strong> if it lets you create two with the same SKU, that's a bug.</div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">3.4</span> Edit your test product</h4>
+      <div class="step"><input type="checkbox" id="s3-4-1"><label for="s3-4-1">Find TEST-001 in the list. Click <strong>Edit</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s3-4-2"><label for="s3-4-2">Change the description. Click Save. Reload the page.</label></div>
+      <div class="step"><input type="checkbox" id="s3-4-3"><label for="s3-4-3">Open it again — the new description is still there.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">3.5</span> Pricing tab — quantity break ladder</h4>
+      <div class="why">If a customer is in a "Wholesale" group, you can give them a different price. You can also give them a discount when they order a lot.</div>
+      <div class="step"><input type="checkbox" id="s3-5-1"><label for="s3-5-1">Open TEST-001 again, click <strong>Pricing</strong> tab.</label></div>
+      <div class="step"><input type="checkbox" id="s3-5-2"><label for="s3-5-2">Click <strong>Add row</strong>. Pick a price group, set unit price = 17.99, min qty = 1.</label></div>
+      <div class="step"><input type="checkbox" id="s3-5-3"><label for="s3-5-3">Click <strong>Add row</strong> again. Same price group, unit price = 14.99, min qty = 10.</label></div>
+      <div class="step"><input type="checkbox" id="s3-5-4"><label for="s3-5-4">Click Save. Re-open the product — both rows should be there.</label></div>
+      <div class="expect"><strong>What you should see in the preview:</strong> at qty=1, the price is 17.99. We'll test the qty=10 break later in Sales Orders.</div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">3.6</span> Image upload</h4>
+      <div class="step"><input type="checkbox" id="s3-6-1"><label for="s3-6-1">Open TEST-001, click the <strong>Image</strong> tab.</label></div>
+      <div class="step"><input type="checkbox" id="s3-6-2"><label for="s3-6-2">Pick any image file from your computer (PNG/JPG, under 5 MB).</label></div>
+      <div class="step"><input type="checkbox" id="s3-6-3"><label for="s3-6-3">Wait — a small thumbnail should appear.</label></div>
+      <div class="step"><input type="checkbox" id="s3-6-4"><label for="s3-6-4">Try uploading a HUGE file (over 5 MB) — it should show an error, not crash.</label></div>
+      <div class="step"><input type="checkbox" id="s3-6-5"><label for="s3-6-5">Try uploading a non-image file (e.g. a PDF) — it should also be rejected.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">3.7</span> Delete the test product (we don't need it anymore)</h4>
+      <div class="step"><input type="checkbox" id="s3-7-1"><label for="s3-7-1">Open TEST-001 again.</label></div>
+      <div class="step"><input type="checkbox" id="s3-7-2"><label for="s3-7-2">Find the <strong>Delete</strong> button (probably at the bottom of the Details tab).</label></div>
+      <div class="step"><input type="checkbox" id="s3-7-3"><label for="s3-7-3">Click it. Confirm the dialog ("are you sure?").</label></div>
+      <div class="step"><input type="checkbox" id="s3-7-4"><label for="s3-7-4">It disappears from the list.</label></div>
+      <div class="warn-box"><strong>⚠️ Heads up:</strong> we'll create a <em>second</em> tester product later for the orders. So if you skipped 3.2–3.7, no problem — just delete TEST-001 here if you have it.</div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 4 · INVENTORY ====== -->
+<section class="section" id="s4">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">4</div>
+    <h3>Inventory &amp; stock adjustments</h3>
+    <div class="pill" data-section-pill>0 / 4</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">The Inventory page shows the current count of every product. You can also "adjust" the count — e.g. if a bottle gets dropped, you can write it off here.</p>
+
+    <div class="mock">
+      <div class="mock-content">
+        <div class="mock-row head"><span style="width:120px">SKU</span><span style="flex:1">Name</span><span style="width:80px">On hand</span><span style="width:80px">Reorder</span><span style="width:80px">Status</span><span style="width:80px">Action</span></div>
+        <div class="mock-row"><span style="font-family:monospace; font-size:11px; width:120px">HASK-ARG-100</span><span style="flex:1">Hask Argan Oil 100ml</span><span style="width:80px">42</span><span style="width:80px">10</span><span style="width:80px"><span class="mock-tag green">OK</span></span><span style="width:80px"><span class="mock-btn outline">Adjust</span></span></div>
+        <div class="mock-row"><span style="font-family:monospace; font-size:11px; width:120px">SILK-MIT-50</span><span style="flex:1">Silkymit 50ml</span><span style="width:80px">3</span><span style="width:80px">10</span><span style="width:80px"><span class="mock-tag amber">Low</span></span><span style="width:80px"><span class="mock-btn outline">Adjust</span></span></div>
+      </div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">4.1</span> Inventory list shows the right colours</h4>
+      <div class="step"><input type="checkbox" id="s4-1-1"><label for="s4-1-1">Click <strong>Inventory</strong> in the sidebar.</label></div>
+      <div class="step"><input type="checkbox" id="s4-1-2"><label for="s4-1-2">Every product in the system is listed.</label></div>
+      <div class="step"><input type="checkbox" id="s4-1-3"><label for="s4-1-3">Anything where "On hand" is less than or equal to "Reorder" should have an amber "Low" badge.</label></div>
+      <div class="step"><input type="checkbox" id="s4-1-4"><label for="s4-1-4">Everything else should have a green "OK" badge.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">4.2</span> Adjust stock UP (add some)</h4>
+      <div class="step"><input type="checkbox" id="s4-2-1"><label for="s4-2-1">Pick any product. Note its current "On hand" number.</label></div>
+      <div class="step"><input type="checkbox" id="s4-2-2"><label for="s4-2-2">Click <strong>Adjust</strong>. A small dialog opens.</label></div>
+      <div class="step"><input type="checkbox" id="s4-2-3"><label for="s4-2-3">Type quantity change = <strong>5</strong> and reason = <strong>"tester adding stock"</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s4-2-4"><label for="s4-2-4">Click Confirm.</label></div>
+      <div class="step"><input type="checkbox" id="s4-2-5"><label for="s4-2-5">The page refreshes — "On hand" should be 5 higher than before.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">4.3</span> Adjust stock DOWN (write off)</h4>
+      <div class="step"><input type="checkbox" id="s4-3-1"><label for="s4-3-1">Same product. Click Adjust again.</label></div>
+      <div class="step"><input type="checkbox" id="s4-3-2"><label for="s4-3-2">Type quantity change = <strong>-5</strong> (with the minus sign) and reason = <strong>"tester removing stock"</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s4-3-3"><label for="s4-3-3">Confirm. "On hand" goes back to its original number.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">4.4</span> Adjust with no reason should be blocked</h4>
+      <div class="step"><input type="checkbox" id="s4-4-1"><label for="s4-4-1">Open the Adjust dialog on any product.</label></div>
+      <div class="step"><input type="checkbox" id="s4-4-2"><label for="s4-4-2">Type a quantity change but leave the reason BLANK.</label></div>
+      <div class="step"><input type="checkbox" id="s4-4-3"><label for="s4-4-3">The Confirm button should be greyed out / disabled, OR you should get a "Reason required" error if you try.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 5 · SUPPLIERS ====== -->
+<section class="section" id="s5">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">5</div>
+    <h3>Suppliers <span class="role-tag admin">admin only</span></h3>
+    <div class="pill" data-section-pill>0 / 5</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">Suppliers are the companies Regional Health buys stock from. We'll create one fake supplier with a few contacts so we can use it later in a Purchase Order.</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">5.1</span> Suppliers list loads</h4>
+      <div class="step"><input type="checkbox" id="s5-1-1"><label for="s5-1-1">Click <strong>Suppliers</strong> in the sidebar.</label></div>
+      <div class="step"><input type="checkbox" id="s5-1-2"><label for="s5-1-2">You see a list with columns: Name, Contact, Email, Phone, Currency, Supplier Code, Payment Terms, Edit.</label></div>
+      <div class="step"><input type="checkbox" id="s5-1-3"><label for="s5-1-3">Click <strong>Edit</strong> on any row — it opens the supplier's detail page with tabs at the top.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">5.2</span> Create a fake supplier — Details tab</h4>
+      <div class="step"><input type="checkbox" id="s5-2-1"><label for="s5-2-1">Back on the Suppliers list, click <strong>+ New</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s5-2-2"><label for="s5-2-2">Fill in: Supplier Code = <strong>TESTSUP</strong>, Name = <strong>Tester Supplier Ltd</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s5-2-3"><label for="s5-2-3">Pick a currency: try <strong>USD</strong> (so we get a foreign-currency PO later).</label></div>
+      <div class="step"><input type="checkbox" id="s5-2-4"><label for="s5-2-4">Try the "Payment Terms" dropdown — it has presets like "20th month", "30 days". Pick one.</label></div>
+      <div class="step"><input type="checkbox" id="s5-2-5"><label for="s5-2-5">Set "Delivery lead days" to a number like 14.</label></div>
+      <div class="step"><input type="checkbox" id="s5-2-6"><label for="s5-2-6">Toggle the "Taxable" switch. Watch what happens to the Tax Rule dropdown — it should flip between GST15 and EXEMPT.</label></div>
+      <div class="step"><input type="checkbox" id="s5-2-7"><label for="s5-2-7">In the Tax Rule dropdown there should be 4 options: GST15, ZERO, IMPORT_GST, EXEMPT.</label></div>
+      <div class="step"><input type="checkbox" id="s5-2-8"><label for="s5-2-8">Don't save yet — keep going to the next test.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">5.3</span> Address tab + Copy postal-to-physical</h4>
+      <div class="step"><input type="checkbox" id="s5-3-1"><label for="s5-3-1">Click the <strong>Address</strong> tab.</label></div>
+      <div class="step"><input type="checkbox" id="s5-3-2"><label for="s5-3-2">Fill in the Postal Address (line 1, city, postcode, country).</label></div>
+      <div class="step"><input type="checkbox" id="s5-3-3"><label for="s5-3-3">Click the "Copy postal → physical" button. Check the Physical address fields are now identical.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">5.4</span> Contacts tab + the "Purchasing" flag</h4>
+      <div class="why">A supplier can have multiple people you call about different things. The "Purchasing" flag picks the one who gets the PO emails.</div>
+      <div class="step"><input type="checkbox" id="s5-4-1"><label for="s5-4-1">Click the <strong>Contacts</strong> tab.</label></div>
+      <div class="step"><input type="checkbox" id="s5-4-2"><label for="s5-4-2">Click <strong>Add</strong>. Fill in first name, last name, email, mobile.</label></div>
+      <div class="step"><input type="checkbox" id="s5-4-3"><label for="s5-4-3">Toggle the "Purchasing" switch ON. Save the contact.</label></div>
+      <div class="step"><input type="checkbox" id="s5-4-4"><label for="s5-4-4">A small "pending" badge appears next to the contact (because the supplier itself isn't saved yet).</label></div>
+      <div class="step"><input type="checkbox" id="s5-4-5"><label for="s5-4-5">Add a SECOND contact, leave Purchasing OFF.</label></div>
+      <div class="step"><input type="checkbox" id="s5-4-6"><label for="s5-4-6">Now click the main <strong>Save</strong> button at the bottom of the page.</label></div>
+      <div class="step"><input type="checkbox" id="s5-4-7"><label for="s5-4-7">Re-open the supplier — both contacts should still be there, with the Purchasing one shown first.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">5.5</span> Tabs that need data first (Purchases / Returns / Costings)</h4>
+      <div class="why">These tabs only have stuff in them after you've placed POs. For now just check they don't crash.</div>
+      <div class="step"><input type="checkbox" id="s5-5-1"><label for="s5-5-1">Click each of: <strong>Purchases</strong>, <strong>Returns</strong>, <strong>Costings</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s5-5-2"><label for="s5-5-2">If the supplier has no POs yet, the tabs should show "no data yet" — not an error.</label></div>
+      <div class="warn-box"><strong>⚠️ Don't delete the supplier!</strong> We need it for the Purchase Order tests later.</div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 6 · CUSTOMERS ====== -->
+<section class="section" id="s6">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">6</div>
+    <h3>Customers</h3>
+    <div class="pill" data-section-pill>0 / 6</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">Customers are the salons / pharmacies / spas that buy stock from Regional Health. Same idea as suppliers, with a few extras.</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">6.1</span> Customers list + pagination</h4>
+      <div class="step"><input type="checkbox" id="s6-1-1"><label for="s6-1-1">Click <strong>Customers</strong>. Columns: Name, Contact, Email, Phone, Edit.</label></div>
+      <div class="step"><input type="checkbox" id="s6-1-2"><label for="s6-1-2">If there are more than 50 customers, scroll to the bottom — there are page numbers (1, 2, 3…).</label></div>
+      <div class="step"><input type="checkbox" id="s6-1-3"><label for="s6-1-3">Click "page 2" if it exists — different customers appear.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">6.2</span> Create a fake customer — Details tab</h4>
+      <div class="step"><input type="checkbox" id="s6-2-1"><label for="s6-2-1">Click <strong>+ New</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s6-2-2"><label for="s6-2-2">Customer Code = <strong>TESTCUST</strong>, Name = <strong>Tester Customer Ltd</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s6-2-3"><label for="s6-2-3">Pick a Price Group (any).</label></div>
+      <div class="step"><input type="checkbox" id="s6-2-4"><label for="s6-2-4">Set Credit Limit to <strong>500</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s6-2-5"><label for="s6-2-5">Pick a Channel, Territory, Sales Rep (any).</label></div>
+      <div class="bug-box"><strong>🐛 Important check:</strong> open the <strong>Tax Rule</strong> dropdown. It should ONLY show: GST15, ZERO, EXEMPT. There should NOT be an "IMPORT_GST" option (that's only for suppliers, never customers).</div>
+      <div class="step"><input type="checkbox" id="s6-2-6"><label for="s6-2-6">Confirm: Tax Rule dropdown has NO "IMPORT_GST" option. ✅ if missing, 🐛 if it's there.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">6.3</span> Address + Contacts tabs</h4>
+      <div class="step"><input type="checkbox" id="s6-3-1"><label for="s6-3-1">Address tab — fill in postal address. Use the copy button.</label></div>
+      <div class="step"><input type="checkbox" id="s6-3-2"><label for="s6-3-2">Contacts tab — add a contact. The flag here is <strong>"Primary billing contact"</strong> (not "Purchasing" like suppliers).</label></div>
+      <div class="step"><input type="checkbox" id="s6-3-3"><label for="s6-3-3">Toggle that flag on for one contact.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">6.4</span> Delivery tab — multiple ship-to addresses</h4>
+      <div class="why">A customer might have a head office for invoices but several shops where stock gets delivered.</div>
+      <div class="step"><input type="checkbox" id="s6-4-1"><label for="s6-4-1">Click the <strong>Delivery</strong> tab.</label></div>
+      <div class="step"><input type="checkbox" id="s6-4-2"><label for="s6-4-2">Add 2 different delivery addresses (e.g. "Auckland Shop", "Wellington Shop").</label></div>
+      <div class="step"><input type="checkbox" id="s6-4-3"><label for="s6-4-3">For one of them, fill in "Delivery instructions" (e.g. "leave at back door").</label></div>
+      <div class="step"><input type="checkbox" id="s6-4-4"><label for="s6-4-4">Click "Mark obsolete" on one address — there's a "Show Obsolete" toggle that hides/shows it.</label></div>
+      <div class="step"><input type="checkbox" id="s6-4-5"><label for="s6-4-5">Click <strong>Save</strong> at the bottom of the page.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">6.5</span> Quotes / Orders / Credits tabs</h4>
+      <div class="step"><input type="checkbox" id="s6-5-1"><label for="s6-5-1">Click each: Quotes, Orders, Credits.</label></div>
+      <div class="step"><input type="checkbox" id="s6-5-2"><label for="s6-5-2">For a brand-new customer they should be empty (no errors).</label></div>
+      <div class="step"><input type="checkbox" id="s6-5-3"><label for="s6-5-3">Each tab has a status filter dropdown — try clicking through the options. The list shouldn't break.</label></div>
+      <div class="warn-box"><strong>⚠️ Don't delete this customer either!</strong> We need it for the Sales Order tests.</div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">6.6</span> Edit an existing customer</h4>
+      <div class="step"><input type="checkbox" id="s6-6-1"><label for="s6-6-1">Open any real customer (not your test one).</label></div>
+      <div class="step"><input type="checkbox" id="s6-6-2"><label for="s6-6-2">Click through every tab without changing anything — make sure they all load without errors.</label></div>
+      <div class="step"><input type="checkbox" id="s6-6-3"><label for="s6-6-3">Click into the Orders tab — you should see their past orders. Try the status filter.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 7 · USERS ====== -->
+<section class="section" id="s7">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">7</div>
+    <h3>Settings → Users <span class="role-tag admin">admin only</span></h3>
+    <div class="pill" data-section-pill>0 / 4</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">Where the boss can add team members and change their passwords.</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">7.1</span> Users list</h4>
+      <div class="step"><input type="checkbox" id="s7-1-1"><label for="s7-1-1">Click <strong>Settings → Users</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s7-1-2"><label for="s7-1-2">Columns: Email, Name, Role badge (ADMIN/SALES/WAREHOUSE), Status, Actions.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">7.2</span> Invite a fake user</h4>
+      <div class="step"><input type="checkbox" id="s7-2-1"><label for="s7-2-1">Fill in the invite form: email = <strong>tester@example.com</strong>, name = "Tester Bot", password = at least 8 chars, role = SALES.</label></div>
+      <div class="step"><input type="checkbox" id="s7-2-2"><label for="s7-2-2">Click Add. The user appears in the list with a "Can sign in" badge.</label></div>
+      <div class="step"><input type="checkbox" id="s7-2-3"><label for="s7-2-3">Try inviting them AGAIN with the same email — should be rejected.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">7.3</span> Reset their password</h4>
+      <div class="step"><input type="checkbox" id="s7-3-1"><label for="s7-3-1">Click the row actions for tester@example.com.</label></div>
+      <div class="step"><input type="checkbox" id="s7-3-2"><label for="s7-3-2">Pick "Set / Reset password". Type a new one. Save.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">7.4</span> Try to delete YOURSELF (should fail)</h4>
+      <div class="step"><input type="checkbox" id="s7-4-1"><label for="s7-4-1">Find your own email in the list.</label></div>
+      <div class="step"><input type="checkbox" id="s7-4-2"><label for="s7-4-2">Try to delete it. The system should refuse — error toast.</label></div>
+      <div class="step"><input type="checkbox" id="s7-4-3"><label for="s7-4-3">Now delete tester@example.com. That should work fine.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 8 · DIMENSIONS ====== -->
+<section class="section" id="s8">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">8</div>
+    <h3>Settings → Brands, Channels, Territories <span class="role-tag admin">admin only</span></h3>
+    <div class="pill" data-section-pill>0 / 3</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">These are the "labels" used to filter reports — like Brand (Hask, Silkymit), Channel (Pharmacy, Salon), Territory (Auckland, Wellington).</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">8.1</span> Add &amp; delete a Brand</h4>
+      <div class="step"><input type="checkbox" id="s8-1-1"><label for="s8-1-1">Go to <strong>Settings → Dimensions</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s8-1-2"><label for="s8-1-2">In the Brands box, type "TestBrand" and press Enter (or click Add).</label></div>
+      <div class="step"><input type="checkbox" id="s8-1-3"><label for="s8-1-3">It appears in the list.</label></div>
+      <div class="step"><input type="checkbox" id="s8-1-4"><label for="s8-1-4">Click the delete (×) next to TestBrand. It disappears.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">8.2</span> Add &amp; delete a Channel</h4>
+      <div class="step"><input type="checkbox" id="s8-2-1"><label for="s8-2-1">Same idea, Channels box. Add "TestChannel", then delete it.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">8.3</span> Add &amp; delete a Territory</h4>
+      <div class="step"><input type="checkbox" id="s8-3-1"><label for="s8-3-1">Same idea, Territories. Add and delete "TestTerritory".</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 9 · PRICE GROUPS ====== -->
+<section class="section" id="s9">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">9</div>
+    <h3>Settings → Price Groups <span class="role-tag admin">admin only</span></h3>
+    <div class="pill" data-section-pill>0 / 4</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">Price groups are like "Retail" / "Wholesale" / "Gold tier". Each customer is in one group, and each product can have a different price per group.</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">9.1</span> Create a Price Group</h4>
+      <div class="step"><input type="checkbox" id="s9-1-1"><label for="s9-1-1">Go to <strong>Settings → Price Groups</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s9-1-2"><label for="s9-1-2">Click <strong>New</strong>. Name = "Tester Wholesale", description = "for testing", sort order = 99.</label></div>
+      <div class="step"><input type="checkbox" id="s9-1-3"><label for="s9-1-3">Save. It appears in the list.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">9.2</span> Set as Default — only one default at a time</h4>
+      <div class="step"><input type="checkbox" id="s9-2-1"><label for="s9-2-1">Note which group currently has the "Default" badge.</label></div>
+      <div class="step"><input type="checkbox" id="s9-2-2"><label for="s9-2-2">Edit your "Tester Wholesale" group, toggle "Is Default" ON, save.</label></div>
+      <div class="step"><input type="checkbox" id="s9-2-3"><label for="s9-2-3">The OLD default should no longer have the badge — only Tester Wholesale.</label></div>
+      <div class="step"><input type="checkbox" id="s9-2-4"><label for="s9-2-4">Set the original group back to default again so you don't break anything.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">9.3</span> Try to delete the default — should fail</h4>
+      <div class="step"><input type="checkbox" id="s9-3-1"><label for="s9-3-1">Try to delete the group that's currently set as Default.</label></div>
+      <div class="step"><input type="checkbox" id="s9-3-2"><label for="s9-3-2">It should refuse with an error.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">9.4</span> Delete your test group</h4>
+      <div class="step"><input type="checkbox" id="s9-4-1"><label for="s9-4-1">Make sure no customer is using "Tester Wholesale" (it'll refuse if any are).</label></div>
+      <div class="step"><input type="checkbox" id="s9-4-2"><label for="s9-4-2">Delete it.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 10 · TAX ====== -->
+<section class="section" id="s10">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">10</div>
+    <h3>Settings → Tax <span class="role-tag admin">admin only</span></h3>
+    <div class="pill" data-section-pill>0 / 3</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">This page maps the four NZ tax rules (GST15, ZERO, IMPORT_GST, EXEMPT) to QuickBooks tax codes. We're not changing anything — just checking it loads and the tables make sense.</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">10.1</span> Tax page loads with no errors</h4>
+      <div class="step"><input type="checkbox" id="s10-1-1"><label for="s10-1-1">Go to <strong>Settings → Tax</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s10-1-2"><label for="s10-1-2">There should be 4 main blocks: NZ GST rules, Income-side mapping, Expense-side mapping, Per-line charge fallback.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">10.2</span> Live "Resolved code" status</h4>
+      <div class="step"><input type="checkbox" id="s10-2-1"><label for="s10-2-1">In the Income table, look at the "Resolved code in your QBO" column.</label></div>
+      <div class="step"><input type="checkbox" id="s10-2-2"><label for="s10-2-2">If QuickBooks is connected, it should show green checks for each rule (or red if the code is missing).</label></div>
+      <div class="step"><input type="checkbox" id="s10-2-3"><label for="s10-2-3">If QuickBooks is NOT connected, the page should still load and just say "not connected".</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">10.3</span> Supplier &amp; Customer assignment tables</h4>
+      <div class="step"><input type="checkbox" id="s10-3-1"><label for="s10-3-1">Scroll down to the supplier and customer tables.</label></div>
+      <div class="step"><input type="checkbox" id="s10-3-2"><label for="s10-3-2">Each entity shows their currently-assigned tax rule + an Edit link. Click one — it should take you to that supplier or customer's edit page.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 11 · BUDGETS ====== -->
+<section class="section" id="s11">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">11</div>
+    <h3>Settings → Budgets <span class="role-tag admin">admin only</span></h3>
+    <div class="pill" data-section-pill>0 / 3</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">Budgets are how the boss tells the system "I expect $50k of sales in April". Then the reports compare actual vs budget.</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">11.1</span> Page loads + Fiscal Year navigation</h4>
+      <div class="step"><input type="checkbox" id="s11-1-1"><label for="s11-1-1">Go to <strong>Settings → Budgets</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s11-1-2"><label for="s11-1-2">There are quick links for FY-1, FY (current), FY+1. Click each — the URL changes and the data updates.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">11.2</span> Upload a tiny budget</h4>
+      <div class="step"><input type="checkbox" id="s11-2-1"><label for="s11-2-1">Find the "Paste TSV/CSV" box.</label></div>
+      <div class="step"><input type="checkbox" id="s11-2-2"><label for="s11-2-2">Paste this exactly (each chunk separated by tabs):
+        <pre style="background:#1e293b; color:#e2e8f0; padding:8px; border-radius:4px; font-size:11px;">1	SALES	5000
+2	SALES	6000</pre>
+      </label></div>
+      <div class="step"><input type="checkbox" id="s11-2-3"><label for="s11-2-3">Click Upload. You should see "X inserted" feedback.</label></div>
+      <div class="step"><input type="checkbox" id="s11-2-4"><label for="s11-2-4">Scroll down — the new rows appear in the "Full budget lines" table.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">11.3</span> Try an invalid line type</h4>
+      <div class="step"><input type="checkbox" id="s11-3-1"><label for="s11-3-1">Paste this nonsense:
+        <pre style="background:#1e293b; color:#e2e8f0; padding:8px; border-radius:4px; font-size:11px;">1	BLAHBLAH	5000</pre>
+      </label></div>
+      <div class="step"><input type="checkbox" id="s11-3-2"><label for="s11-3-2">Upload. It should be skipped/rejected (the feedback will say something like "0 inserted, 1 skipped"), not crash.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 12 · SCHEDULED REPORTS ====== -->
+<section class="section" id="s12">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">12</div>
+    <h3>Settings → Scheduled Reports <span class="role-tag admin">admin only</span></h3>
+    <div class="pill" data-section-pill>0 / 3</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">Set up reports to email automatically.</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">12.1</span> Create a schedule</h4>
+      <div class="step"><input type="checkbox" id="s12-1-1"><label for="s12-1-1">Go to <strong>Settings → Scheduled Reports</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s12-1-2"><label for="s12-1-2">Pick a report from the dropdown (e.g. "Monthly Sales Analysis").</label></div>
+      <div class="step"><input type="checkbox" id="s12-1-3"><label for="s12-1-3">Pick a frequency preset OR type a custom cron expression (e.g. <code>0 8 1 * *</code>).</label></div>
+      <div class="step"><input type="checkbox" id="s12-1-4"><label for="s12-1-4">Recipients: type your own email.</label></div>
+      <div class="step"><input type="checkbox" id="s12-1-5"><label for="s12-1-5">Click Add. It appears in the "Active schedules" table.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">12.2</span> Pause / resume / delete</h4>
+      <div class="step"><input type="checkbox" id="s12-2-1"><label for="s12-2-1">Click Pause on your new schedule. Status flips to "Paused".</label></div>
+      <div class="step"><input type="checkbox" id="s12-2-2"><label for="s12-2-2">Click Resume. Status flips back.</label></div>
+      <div class="step"><input type="checkbox" id="s12-2-3"><label for="s12-2-3">Click Delete. It disappears.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">12.3</span> Delivery log</h4>
+      <div class="step"><input type="checkbox" id="s12-3-1"><label for="s12-3-1">Scroll down to "Recent deliveries". If any have happened, they show with Sent/Failed status.</label></div>
+      <div class="step"><input type="checkbox" id="s12-3-2"><label for="s12-3-2">If empty, that's OK too — just check the table doesn't crash.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 13 · QUICKBOOKS ====== -->
+<section class="section" id="s13">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">13</div>
+    <h3>Settings → QuickBooks <span class="role-tag admin">admin only</span></h3>
+    <div class="pill" data-section-pill>0 / 3</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">QuickBooks is the accounting system. This page shows the connection state and lets you push everything across in one click. <strong>Only do the connect step if your dad says it's safe.</strong></p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">13.1</span> Connection state</h4>
+      <div class="step"><input type="checkbox" id="s13-1-1"><label for="s13-1-1">Go to <strong>Settings → QuickBooks</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s13-1-2"><label for="s13-1-2">If connected: it shows the realm ID and token expiry.</label></div>
+      <div class="step"><input type="checkbox" id="s13-1-3"><label for="s13-1-3">If not connected: it shows a "Connect QuickBooks" button.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">13.2</span> "Sync all" button is disabled if not connected</h4>
+      <div class="step"><input type="checkbox" id="s13-2-1"><label for="s13-2-1">If QBO is not connected, the "Sync all to QuickBooks" button should be greyed out.</label></div>
+      <div class="step"><input type="checkbox" id="s13-2-2"><label for="s13-2-2">If it IS connected and your dad says you can: click it. A spinner appears, then a toast tells you how many were enqueued / succeeded / failed.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">13.3</span> Pending / failed jobs table</h4>
+      <div class="step"><input type="checkbox" id="s13-3-1"><label for="s13-3-1">Scroll to the jobs table. Columns: When, Type (INVOICE/BILL), Status, Error.</label></div>
+      <div class="step"><input type="checkbox" id="s13-3-2"><label for="s13-3-2">If empty — fine. Otherwise check that error messages aren't completely cut off.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 14 · AUDIT ====== -->
+<section class="section" id="s14">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">14</div>
+    <h3>Settings → Audit log <span class="role-tag admin">admin only</span></h3>
+    <div class="pill" data-section-pill>0 / 2</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">Every stock movement (receipts, picks, adjustments) is logged here. It's like a permanent diary.</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">14.1</span> Audit log loads</h4>
+      <div class="step"><input type="checkbox" id="s14-1-1"><label for="s14-1-1">Go to <strong>Settings → Audit</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s14-1-2"><label for="s14-1-2">Up to 500 rows. Columns: When, Product, Type, Δ Qty, Ref, Notes.</label></div>
+      <div class="step"><input type="checkbox" id="s14-1-3"><label for="s14-1-3">Negative qty rows should be RED, positive ones GREEN.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">14.2</span> Your earlier adjustments are here</h4>
+      <div class="step"><input type="checkbox" id="s14-2-1"><label for="s14-2-1">Find the "tester adding stock" / "tester removing stock" rows you made in section 4.</label></div>
+      <div class="step"><input type="checkbox" id="s14-2-2"><label for="s14-2-2">Type column should say "ADJUSTMENT". Notes column should show your reason.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 15 · PO CREATE ====== -->
+<section class="section" id="s15">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">15</div>
+    <h3>Purchase Orders — create &amp; cancel <span class="role-tag admin">admin</span><span class="role-tag warehouse">warehouse</span></h3>
+    <div class="pill" data-section-pill>0 / 5</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">A Purchase Order is what we send to a supplier when we want to buy stock. We'll create one in USD (foreign) so we can also test the FX-rate stuff.</p>
+
+    <div class="mock">
+      <div class="mock-content">
+        <div class="mock-row head"><span style="width:80px">PO #</span><span style="flex:1">Supplier</span><span style="width:80px">Status</span><span style="width:60px">CCY</span><span style="width:80px">Total</span><span></span></div>
+        <div class="mock-row"><span style="font-family:monospace; font-size:11px; width:80px">PO-0123</span><span style="flex:1">Tester Supplier Ltd</span><span style="width:80px"><span class="mock-tag amber">DRAFT</span></span><span style="width:60px">🇺🇸 USD</span><span style="width:80px">$240.00</span><span class="mock-btn outline">Open</span></div>
+      </div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">15.1</span> Create a foreign-currency PO</h4>
+      <div class="step"><input type="checkbox" id="s15-1-1"><label for="s15-1-1">Go to <strong>Purchase Orders → + New</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s15-1-2"><label for="s15-1-2">Pick supplier <strong>Tester Supplier Ltd</strong> (the one you made in section 5). Currency should auto-fill to USD.</label></div>
+      <div class="step"><input type="checkbox" id="s15-1-3"><label for="s15-1-3">You should see something like <em>"1 USD = 1.6800 NZD · 2026-04-30"</em> — that's the FX rate snapshot.</label></div>
+      <div class="step"><input type="checkbox" id="s15-1-4"><label for="s15-1-4">Set Expected date to a week from now.</label></div>
+      <div class="step"><input type="checkbox" id="s15-1-5"><label for="s15-1-5">Set Freight = 25.</label></div>
+      <div class="step"><input type="checkbox" id="s15-1-6"><label for="s15-1-6">Add 2 lines: pick any product, qty 10, unit cost 5.50. And a different product, qty 4, unit cost 12.</label></div>
+      <div class="step"><input type="checkbox" id="s15-1-7"><label for="s15-1-7">The subtotal updates as you type. The NZD equivalent is shown below it.</label></div>
+      <div class="step"><input type="checkbox" id="s15-1-8"><label for="s15-1-8">Click Save. You land on the PO detail page in DRAFT status.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">15.2</span> Try to save with no lines (should fail)</h4>
+      <div class="step"><input type="checkbox" id="s15-2-1"><label for="s15-2-1">Click + New again. Pick a supplier. Don't add any lines. Click Save.</label></div>
+      <div class="step"><input type="checkbox" id="s15-2-2"><label for="s15-2-2">It should refuse with an error.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">15.3</span> Mark Ordered</h4>
+      <div class="step"><input type="checkbox" id="s15-3-1"><label for="s15-3-1">Open the PO from 15.1 (still DRAFT).</label></div>
+      <div class="step"><input type="checkbox" id="s15-3-2"><label for="s15-3-2">Click <strong>Mark Ordered</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s15-3-3"><label for="s15-3-3">Status badge changes to ORDERED. The "Receive into stock" button appears.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">15.4</span> Print the PO PDF</h4>
+      <div class="step"><input type="checkbox" id="s15-4-1"><label for="s15-4-1">On the PO detail page, click <strong>Print PDF</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s15-4-2"><label for="s15-4-2">A PDF opens in a new tab. Check it has supplier name, lines, totals, FX rate.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">15.5</span> Cancel a different DRAFT PO</h4>
+      <div class="step"><input type="checkbox" id="s15-5-1"><label for="s15-5-1">Create another quick PO (any supplier, 1 line, qty 1, cost 1).</label></div>
+      <div class="step"><input type="checkbox" id="s15-5-2"><label for="s15-5-2">While in DRAFT, click <strong>Cancel</strong>. Status changes to CANCELLED.</label></div>
+      <div class="step"><input type="checkbox" id="s15-5-3"><label for="s15-5-3">Try clicking Mark Ordered now — it should be gone or refuse (you can't un-cancel).</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 16 · PO FULL RECEIVE ====== -->
+<section class="section" id="s16">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">16</div>
+    <h3>Purchase Orders — full receive (the simple way) <span class="role-tag admin">admin</span><span class="role-tag warehouse">warehouse</span></h3>
+    <div class="pill" data-section-pill>0 / 4</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">When all the stock arrives in one go, click "Receive into stock" — done.</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">16.1</span> Note the current stock levels</h4>
+      <div class="step"><input type="checkbox" id="s16-1-1"><label for="s16-1-1">Open the ORDERED PO from section 15.</label></div>
+      <div class="step"><input type="checkbox" id="s16-1-2"><label for="s16-1-2">For each line: jot down the product's current "On hand" (you can open Inventory in another tab).</label></div>
+      <div class="notes"><label>📝 Stock levels before</label><textarea data-note placeholder="Product 1: ___  Product 2: ___"></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">16.2</span> Click "Receive into stock"</h4>
+      <div class="step"><input type="checkbox" id="s16-2-1"><label for="s16-2-1">Click the big blue <strong>Receive into stock</strong> button.</label></div>
+      <div class="step"><input type="checkbox" id="s16-2-2"><label for="s16-2-2">The PO status flips to RECEIVED.</label></div>
+      <div class="step"><input type="checkbox" id="s16-2-3"><label for="s16-2-3">Each line's "Qty Received" matches "Qty Ordered" (with a green ✓).</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">16.3</span> Check stock went up</h4>
+      <div class="step"><input type="checkbox" id="s16-3-1"><label for="s16-3-1">Switch to the Inventory page or refresh it.</label></div>
+      <div class="step"><input type="checkbox" id="s16-3-2"><label for="s16-3-2">For the products on the PO, "On hand" should be HIGHER than what you noted in 16.1, by the qty received.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">16.4</span> Check the audit log</h4>
+      <div class="step"><input type="checkbox" id="s16-4-1"><label for="s16-4-1">Go to <strong>Settings → Audit</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s16-4-2"><label for="s16-4-2">The most recent rows should be Type = "PO_RECEIPT", with green positive Δ Qty values.</label></div>
+      <div class="step"><input type="checkbox" id="s16-4-3"><label for="s16-4-3">Notes column should reference the PO number.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 17 · PO PARTIAL RECEIVE ====== -->
+<section class="section" id="s17">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">17</div>
+    <h3>Purchase Orders — partial receive (with batch &amp; charges) <span class="role-tag admin">admin</span><span class="role-tag warehouse">warehouse</span></h3>
+    <div class="pill" data-section-pill>0 / 5</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">Sometimes only half the stock arrives at first. Or there's customs duty on top of freight. The partial-receive form handles both.</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">17.1</span> Make another PO ready to partial-receive</h4>
+      <div class="step"><input type="checkbox" id="s17-1-1"><label for="s17-1-1">Create a fresh PO (any supplier, 2 lines: qty 10 each).</label></div>
+      <div class="step"><input type="checkbox" id="s17-1-2"><label for="s17-1-2">Mark it Ordered.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">17.2</span> Receive only part of one line</h4>
+      <div class="step"><input type="checkbox" id="s17-2-1"><label for="s17-2-1">Below the lines table, the <strong>Partial receive</strong> form should appear.</label></div>
+      <div class="step"><input type="checkbox" id="s17-2-2"><label for="s17-2-2">For line 1: Receiving Now = <strong>4</strong>, Batch code = <strong>BATCH-A</strong>, Expiry date = a year from now.</label></div>
+      <div class="step"><input type="checkbox" id="s17-2-3"><label for="s17-2-3">For line 2: Receiving Now = <strong>0</strong> (skip).</label></div>
+      <div class="step"><input type="checkbox" id="s17-2-4"><label for="s17-2-4">Add a custom charge: label = <strong>Customs duty</strong>, amount = <strong>50</strong>, currency = NZD, tax rate = 0.</label></div>
+      <div class="step"><input type="checkbox" id="s17-2-5"><label for="s17-2-5">Click Submit. PO stays in ORDERED status. Line 1 shows "4 received / 6 outstanding". Line 2 still 0/10.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">17.3</span> The receive charge is shown on the PO</h4>
+      <div class="step"><input type="checkbox" id="s17-3-1"><label for="s17-3-1">Scroll up to the totals section.</label></div>
+      <div class="step"><input type="checkbox" id="s17-3-2"><label for="s17-3-2">A "Customs duty: $50.00" line is now visible in the receive-charges block.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">17.4</span> Finish the PO with a second partial</h4>
+      <div class="step"><input type="checkbox" id="s17-4-1"><label for="s17-4-1">Use the partial form again: line 1 Receiving Now = 6 (the rest), line 2 Receiving Now = 10.</label></div>
+      <div class="step"><input type="checkbox" id="s17-4-2"><label for="s17-4-2">Submit. The PO automatically jumps to RECEIVED status.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">17.5</span> Check the cost rolled in correctly</h4>
+      <div class="step"><input type="checkbox" id="s17-5-1"><label for="s17-5-1">Open one of the products from this PO. Look at "Cost (NZD)" on the Details tab.</label></div>
+      <div class="step"><input type="checkbox" id="s17-5-2"><label for="s17-5-2">It should be UPDATED — the customs duty + freight got rolled into the unit cost.</label></div>
+      <div class="step"><input type="checkbox" id="s17-5-3"><label for="s17-5-3">Open the supplier's <strong>Costings</strong> tab. The receipts you just did should appear with their landed cost.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 18 · SO CREATE ====== -->
+<section class="section" id="s18">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">18</div>
+    <h3>Sales Orders — create &amp; confirm <span class="role-tag admin">admin</span><span class="role-tag sales">sales</span></h3>
+    <div class="pill" data-section-pill>0 / 4</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">A Sales Order is the customer's order. We'll create one for our test customer.</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">18.1</span> Create a basic SO</h4>
+      <div class="step"><input type="checkbox" id="s18-1-1"><label for="s18-1-1">Go to <strong>Sales Orders → + New</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s18-1-2"><label for="s18-1-2">Pick customer <strong>Tester Customer Ltd</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s18-1-3"><label for="s18-1-3">Add 2 lines: any 2 products, qty 1 each.</label></div>
+      <div class="step"><input type="checkbox" id="s18-1-4"><label for="s18-1-4">Watch the Subtotal · GST 15% · Total update as you change qty.</label></div>
+      <div class="step"><input type="checkbox" id="s18-1-5"><label for="s18-1-5">Save. Lands on the SO detail page, status DRAFT.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">18.2</span> Confirm — credit limit blocked</h4>
+      <div class="why">Remember we set Tester Customer's credit limit to $500 in section 6. Let's test it actually blocks orders over that.</div>
+      <div class="step"><input type="checkbox" id="s18-2-1"><label for="s18-2-1">Make another SO for Tester Customer with a HUGE total (e.g. qty 100 of a $50 product).</label></div>
+      <div class="step"><input type="checkbox" id="s18-2-2"><label for="s18-2-2">Click <strong>Confirm</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s18-2-3"><label for="s18-2-3">A red error toast should appear mentioning the credit limit.</label></div>
+      <div class="step"><input type="checkbox" id="s18-2-4"><label for="s18-2-4">Status stays DRAFT.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">18.3</span> Confirm a small order — succeeds</h4>
+      <div class="step"><input type="checkbox" id="s18-3-1"><label for="s18-3-1">Open the small SO from 18.1 (under $500).</label></div>
+      <div class="step"><input type="checkbox" id="s18-3-2"><label for="s18-3-2">Click Confirm. Status flips to CONFIRMED.</label></div>
+      <div class="step"><input type="checkbox" id="s18-3-3"><label for="s18-3-3">A "Mark Picked" button + a partial-pick form appear.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">18.4</span> Quantity-break price kicks in at qty 10</h4>
+      <div class="why">Earlier you set up a $14.99 price at qty ≥ 10 in TEST-001's pricing. Let's check it actually applies (only relevant if your test customer is in the right price group).</div>
+      <div class="step"><input type="checkbox" id="s18-4-1"><label for="s18-4-1">Make a new DRAFT SO for Tester Customer.</label></div>
+      <div class="step"><input type="checkbox" id="s18-4-2"><label for="s18-4-2">Add a product where you've set up qty breaks. Set qty = 9 — note the unit price.</label></div>
+      <div class="step"><input type="checkbox" id="s18-4-3"><label for="s18-4-3">Change qty to 10 — unit price drops to the lower break price.</label></div>
+      <div class="step"><input type="checkbox" id="s18-4-4"><label for="s18-4-4">Save.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 19 · SO PICK & SHIP ====== -->
+<section class="section" id="s19">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">19</div>
+    <h3>Sales Orders — pick &amp; ship <span class="role-tag admin">admin</span><span class="role-tag sales">sales</span><span class="role-tag warehouse">warehouse</span></h3>
+    <div class="pill" data-section-pill>0 / 6</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">Pick = put the items in a box. Ship = send the box. The system tracks both.</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">19.1</span> Pick list PDF before picking</h4>
+      <div class="step"><input type="checkbox" id="s19-1-1"><label for="s19-1-1">Open the CONFIRMED SO from 18.3.</label></div>
+      <div class="step"><input type="checkbox" id="s19-1-2"><label for="s19-1-2">Click <strong>Pick list</strong>. PDF opens in a new tab. Items should be sorted by bin location.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">19.2</span> Mark Picked (full)</h4>
+      <div class="step"><input type="checkbox" id="s19-2-1"><label for="s19-2-1">Note the on-hand stock for each line in another tab.</label></div>
+      <div class="step"><input type="checkbox" id="s19-2-2"><label for="s19-2-2">Click <strong>Mark Picked</strong>. Status flips to PICKED.</label></div>
+      <div class="step"><input type="checkbox" id="s19-2-3"><label for="s19-2-3">"Picked" column now matches "Qty" on every line.</label></div>
+      <div class="step"><input type="checkbox" id="s19-2-4"><label for="s19-2-4">Refresh Inventory — stock has DROPPED for each picked product.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">19.3</span> Try a partial pick on a different SO</h4>
+      <div class="step"><input type="checkbox" id="s19-3-1"><label for="s19-3-1">Make + Confirm another SO with 2 lines, qty 5 each.</label></div>
+      <div class="step"><input type="checkbox" id="s19-3-2"><label for="s19-3-2">In the partial-pick form: line 1 Picking Now = 3, line 2 = 0.</label></div>
+      <div class="step"><input type="checkbox" id="s19-3-3"><label for="s19-3-3">Submit. The SO stays CONFIRMED but line 1 shows "3 picked / 2 outstanding".</label></div>
+      <div class="bug-box"><strong>🐛 Known quirk:</strong> at this point, the stock level for line 1's product should NOT have dropped yet. It only drops when ALL lines are fully picked. Verify by checking the inventory page.</div>
+      <div class="step"><input type="checkbox" id="s19-3-4"><label for="s19-3-4">Now finish the SO: pick 2 more on line 1 + 5 on line 2 = full. Status flips to PICKED. NOW the stock drops.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">19.4</span> Packing slip PDF</h4>
+      <div class="step"><input type="checkbox" id="s19-4-1"><label for="s19-4-1">On a PICKED or SHIPPED SO, click <strong>Packing slip</strong>. PDF opens.</label></div>
+      <div class="step"><input type="checkbox" id="s19-4-2"><label for="s19-4-2">Check it shows customer name + line items.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">19.5</span> Ship the order</h4>
+      <div class="step"><input type="checkbox" id="s19-5-1"><label for="s19-5-1">On a PICKED SO, type a tracking ref (any text — e.g. "TR-12345"). Click <strong>Ship</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s19-5-2"><label for="s19-5-2">Status becomes SHIPPED. The shippedDate appears.</label></div>
+      <div class="step"><input type="checkbox" id="s19-5-3"><label for="s19-5-3">Tracking ref is now read-only.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">19.6</span> Auto-rebate credit note appears</h4>
+      <div class="step"><input type="checkbox" id="s19-6-1"><label for="s19-6-1">After shipping, scroll down on the SO detail. There's now a "Credit notes" section.</label></div>
+      <div class="step"><input type="checkbox" id="s19-6-2"><label for="s19-6-2">A row with reason "AUTO_REBATE" should appear, amount = 2.5% of the order subtotal.</label></div>
+      <div class="step"><input type="checkbox" id="s19-6-3"><label for="s19-6-3">Open the customer's <strong>Credits</strong> tab — the same credit note shows there.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 20 · PROFORMA ====== -->
+<section class="section" id="s20">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">20</div>
+    <h3>Proforma invoices</h3>
+    <div class="pill" data-section-pill>0 / 4</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">A proforma is a "pretend invoice" — a quote you send the customer before they pay.</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">20.1</span> Issue from an existing SO</h4>
+      <div class="step"><input type="checkbox" id="s20-1-1"><label for="s20-1-1">Open any DRAFT or CONFIRMED SO.</label></div>
+      <div class="step"><input type="checkbox" id="s20-1-2"><label for="s20-1-2">Click <strong>Issue Proforma</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s20-1-3"><label for="s20-1-3">A "Proforma" badge appears on the SO. The button changes to "View Proforma".</label></div>
+      <div class="step"><input type="checkbox" id="s20-1-4"><label for="s20-1-4">Click View Proforma. The proforma opens with a PF number (e.g. PF-0001).</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">20.2</span> Idempotent — clicking again returns the same one</h4>
+      <div class="step"><input type="checkbox" id="s20-2-1"><label for="s20-2-1">Go back to the SO. Click "View Proforma" — same PF number. The system shouldn't make a second one.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">20.3</span> Standalone proforma</h4>
+      <div class="step"><input type="checkbox" id="s20-3-1"><label for="s20-3-1">Go to <strong>Proforma Invoices → + New</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s20-3-2"><label for="s20-3-2">Pick Tester Customer, add 1 line, save.</label></div>
+      <div class="step"><input type="checkbox" id="s20-3-3"><label for="s20-3-3">A new SO + Proforma is created together. Find the SO in the SO list — it has a "Proforma" badge.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">20.4</span> Proforma list + PDF</h4>
+      <div class="step"><input type="checkbox" id="s20-4-1"><label for="s20-4-1">Go to <strong>Proforma Invoices</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s20-4-2"><label for="s20-4-2">Both proformas show. Expires column should be ~30 days from today.</label></div>
+      <div class="step"><input type="checkbox" id="s20-4-3"><label for="s20-4-3">Click the PDF link. PDF opens with the customer's name and the line items.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 21 · RESERVATIONS ====== -->
+<section class="section" id="s21">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">21</div>
+    <h3>Stock reservations</h3>
+    <div class="pill" data-section-pill>0 / 3</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">Reservations let a sales rep "hold" some stock for a customer before the order is placed. They're advisory — they don't actually reduce stock counts.</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">21.1</span> Make a reservation</h4>
+      <div class="step"><input type="checkbox" id="s21-1-1"><label for="s21-1-1">Go to <strong>Reservations</strong>.</label></div>
+      <div class="step"><input type="checkbox" id="s21-1-2"><label for="s21-1-2">Click "+ New Reservation". Pick a product, customer = Tester Customer, qty = 5, expires in 7 days, notes = "tester reservation".</label></div>
+      <div class="step"><input type="checkbox" id="s21-1-3"><label for="s21-1-3">Save. It appears in the active list.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">21.2</span> Stock count is NOT affected</h4>
+      <div class="step"><input type="checkbox" id="s21-2-1"><label for="s21-2-1">Go to Inventory. Check the same product's "On hand".</label></div>
+      <div class="step"><input type="checkbox" id="s21-2-2"><label for="s21-2-2">It should be unchanged — reservations don't touch stock counts.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">21.3</span> Release the reservation</h4>
+      <div class="step"><input type="checkbox" id="s21-3-1"><label for="s21-3-1">Back on Reservations, click <strong>Release</strong> on your test reservation.</label></div>
+      <div class="step"><input type="checkbox" id="s21-3-2"><label for="s21-3-2">It disappears from the active list (the page only shows un-released ones).</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 22 · REPORTS ====== -->
+<section class="section" id="s22">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">22</div>
+    <h3>Reports — open every one</h3>
+    <div class="pill" data-section-pill>0 / 17</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">There are 17 reports. Just open each one and check the page renders without an error. If any look weird (missing data, wrong totals, broken charts), make a note.</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">22.1</span> Reports hub</h4>
+      <div class="step"><input type="checkbox" id="s22-h"><label for="s22-h">Go to <strong>Reports</strong>. KPI strip + monthly bar chart + grid of report tiles.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">22.2</span> Open each report and tick</h4>
+      <div class="step"><input type="checkbox" id="s22-1"><label for="s22-1">Brand Breakdown — table of brands, sales, COGS, margin.</label></div>
+      <div class="step"><input type="checkbox" id="s22-2"><label for="s22-2">Customer Sales — list of customers with totals + filters (Rep, Channel).</label></div>
+      <div class="step"><input type="checkbox" id="s22-3"><label for="s22-3">Actual vs Budget — monthly grid with variance.</label></div>
+      <div class="step"><input type="checkbox" id="s22-4"><label for="s22-4">Tester Tracker — products marked Tester only.</label></div>
+      <div class="step"><input type="checkbox" id="s22-5"><label for="s22-5">Stock Turn — turn ratio + weeks of stock per product.</label></div>
+      <div class="step"><input type="checkbox" id="s22-6"><label for="s22-6">Stock on Hand — every active product, qty, value.</label></div>
+      <div class="step"><input type="checkbox" id="s22-7"><label for="s22-7">Channel Trends — try the month selector (6 / 12 / 19 / 24 / 36).</label></div>
+      <div class="step"><input type="checkbox" id="s22-8"><label for="s22-8">Overstock / Slow Movers — try changing the weeks threshold.</label></div>
+      <div class="step"><input type="checkbox" id="s22-9"><label for="s22-9">Customer Rolling Trends — list view + click into a customer for the drill-down.</label></div>
+      <div class="step"><input type="checkbox" id="s22-10"><label for="s22-10">Monthly Sales Analysis — month-by-month totals.</label></div>
+      <div class="step"><input type="checkbox" id="s22-11"><label for="s22-11">Rep Performance — per-rep totals.</label></div>
+      <div class="step"><input type="checkbox" id="s22-12"><label for="s22-12">Expiry Tracker — RAG (red/amber/green) status.</label></div>
+      <div class="step"><input type="checkbox" id="s22-13"><label for="s22-13">Re-order Planner — products needing restock.</label></div>
+      <div class="step"><input type="checkbox" id="s22-14"><label for="s22-14">Container Planning — open POs grouped by supplier.</label></div>
+      <div class="step"><input type="checkbox" id="s22-15"><label for="s22-15">Supplier ETA — list of open POs with days-until-expected.</label></div>
+      <div class="step"><input type="checkbox" id="s22-16"><label for="s22-16">Try the FY selector on any report — drop down to last year. Data updates.</label></div>
+      <div class="warn-box"><strong>⚠️ For each report:</strong> note ANYTHING that looks weird — wrong totals, blank columns, charts that don't render, dates in wrong order, etc.</div>
+      <div class="notes"><label>🐛 Bug notes — write the report name + what's wrong</label><textarea data-note placeholder="e.g. 'Stock Turn — Hask Argan shows weeks of stock = NaN'" style="min-height:120px"></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 23 · EXPORTS ====== -->
+<section class="section" id="s23">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">23</div>
+    <h3>Reports — exports (CSV / Excel / PDF)</h3>
+    <div class="pill" data-section-pill>0 / 4</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">Some reports have download buttons. Test that the files actually download and open.</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">23.1</span> Stock on Hand — Excel + CSV + PDF</h4>
+      <div class="step"><input type="checkbox" id="s23-1-1"><label for="s23-1-1">On the Stock on Hand report, find the export buttons.</label></div>
+      <div class="step"><input type="checkbox" id="s23-1-2"><label for="s23-1-2">Click XLSX — file downloads. Open in Excel/Numbers — branded header (dark blue), data rows, totals.</label></div>
+      <div class="step"><input type="checkbox" id="s23-1-3"><label for="s23-1-3">Click CSV — file downloads. Opens in any text editor.</label></div>
+      <div class="step"><input type="checkbox" id="s23-1-4"><label for="s23-1-4">Click PDF (Stock Valuation) — opens. Has a header, table, page numbers in footer.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">23.2</span> Monthly Sales Analysis — XLSX</h4>
+      <div class="step"><input type="checkbox" id="s23-2-1"><label for="s23-2-1">Open Monthly Sales Analysis. Click XLSX.</label></div>
+      <div class="step"><input type="checkbox" id="s23-2-2"><label for="s23-2-2">Open the file — should have monthly numbers + brand breakdown sheet/section.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">23.3</span> Re-order Planner XLSX</h4>
+      <div class="step"><input type="checkbox" id="s23-3-1"><label for="s23-3-1">Open Re-order Planner. Click XLSX.</label></div>
+      <div class="step"><input type="checkbox" id="s23-3-2"><label for="s23-3-2">File downloads with rows grouped/sorted by supplier.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">23.4</span> CSV downloads from URLs</h4>
+      <div class="step"><input type="checkbox" id="s23-4-1"><label for="s23-4-1">Type these URLs into the address bar (replacing the host with your real one):
+        <ul style="margin-top:6px">
+          <li><code>/api/reports/sales-30d.csv</code></li>
+          <li><code>/api/reports/stock-on-hand.csv</code></li>
+          <li><code>/api/reports/transactions.csv</code></li>
+        </ul>
+      </label></div>
+      <div class="step"><input type="checkbox" id="s23-4-2"><label for="s23-4-2">Each one downloads a CSV file. Open them and check they have rows.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 24 · MOBILE INSTALL ====== -->
+<section class="section" id="s24">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">24</div>
+    <h3>Mobile PWA — install &amp; sign in <span class="role-tag mobile">phone</span></h3>
+    <div class="pill" data-section-pill>0 / 3</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">Time to grab a phone! Open the same URL but add <code>/mobile</code> at the end (e.g. <code>http://&hellip;/mobile</code>).</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">24.1</span> Sign in on the phone</h4>
+      <div class="step"><input type="checkbox" id="s24-1-1"><label for="s24-1-1">Open the app URL on a phone (in Chrome/Safari). Sign in.</label></div>
+      <div class="step"><input type="checkbox" id="s24-1-2"><label for="s24-1-2">Navigate to <code>/mobile</code> — you see 3 big tiles: Pick / Receive / Stocktake.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">24.2</span> Install as PWA</h4>
+      <div class="step"><input type="checkbox" id="s24-2-1"><label for="s24-2-1">In Chrome on Android: tap the menu → "Install app" or "Add to home screen".</label></div>
+      <div class="step"><input type="checkbox" id="s24-2-2"><label for="s24-2-2">In Safari on iPhone: tap Share → "Add to Home Screen".</label></div>
+      <div class="step"><input type="checkbox" id="s24-2-3"><label for="s24-2-3">Open the home-screen icon. The app opens fullscreen — no browser bar.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">24.3</span> Theme is dark navy</h4>
+      <div class="step"><input type="checkbox" id="s24-3-1"><label for="s24-3-1">Mobile UI should be dark-themed (navy/slate), no sidebar, no topbar — just the 3 tiles + a back button on inner pages.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 25 · MOBILE PICK ====== -->
+<section class="section" id="s25">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">25</div>
+    <h3>Mobile — pick by barcode <span class="role-tag mobile">phone</span></h3>
+    <div class="pill" data-section-pill>0 / 5</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">Pick = "the phone reads barcodes off products as you walk around the warehouse and ticks them off the order".</p>
+    <p class="lead">⚠️ You'll need a CONFIRMED Sales Order with products that have barcodes set. Use the SO from section 18 — but first add a unit barcode to one of its products.</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">25.1</span> Pick list shows your SO</h4>
+      <div class="step"><input type="checkbox" id="s25-1-1"><label for="s25-1-1">Tap the <strong>Pick</strong> tile.</label></div>
+      <div class="step"><input type="checkbox" id="s25-1-2"><label for="s25-1-2">A list appears with all CONFIRMED SOs that still have stuff to pick. Your test SO should be there.</label></div>
+      <div class="step"><input type="checkbox" id="s25-1-3"><label for="s25-1-3">Tap the SO. The pick view loads. Lines are sorted by bin location.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">25.2</span> Camera permission</h4>
+      <div class="step"><input type="checkbox" id="s25-2-1"><label for="s25-2-1">Browser asks for camera permission. Allow it.</label></div>
+      <div class="step"><input type="checkbox" id="s25-2-2"><label for="s25-2-2">A live camera preview shows up.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">25.3</span> Scan the right barcode</h4>
+      <div class="step"><input type="checkbox" id="s25-3-1"><label for="s25-3-1">Point the camera at a product on the SO whose unit barcode is set.</label></div>
+      <div class="step"><input type="checkbox" id="s25-3-2"><label for="s25-3-2">Phone vibrates / beeps. The line's "Picking now" goes up by 1.</label></div>
+      <div class="step"><input type="checkbox" id="s25-3-3"><label for="s25-3-3">If it was a CASE barcode instead, "Picking now" goes up by the case qty (e.g. 12).</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">25.4</span> Scan something not on the SO</h4>
+      <div class="step"><input type="checkbox" id="s25-4-1"><label for="s25-4-1">Point at any other barcode (food, book, etc).</label></div>
+      <div class="step"><input type="checkbox" id="s25-4-2"><label for="s25-4-2">A red "Not on this order" toast appears. No line changes.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">25.5</span> Commit + back to web</h4>
+      <div class="step"><input type="checkbox" id="s25-5-1"><label for="s25-5-1">Tap <strong>Commit</strong>. A success toast appears, you go back to the pick list.</label></div>
+      <div class="step"><input type="checkbox" id="s25-5-2"><label for="s25-5-2">Open the SO on the WEB version. The "Picked" column should now show what you scanned.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 26 · MOBILE RECEIVE ====== -->
+<section class="section" id="s26">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">26</div>
+    <h3>Mobile — receive by barcode <span class="role-tag mobile">phone</span></h3>
+    <div class="pill" data-section-pill>0 / 3</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">Same idea but for incoming stock. Needs an ORDERED PO with barcodes on the products.</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">26.1</span> Receive list</h4>
+      <div class="step"><input type="checkbox" id="s26-1-1"><label for="s26-1-1">Tap <strong>Receive</strong>. ORDERED POs are listed.</label></div>
+      <div class="step"><input type="checkbox" id="s26-1-2"><label for="s26-1-2">Tap one. The receive view loads with lines sorted by bin (or by SKU if no bin).</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">26.2</span> Scan + commit</h4>
+      <div class="step"><input type="checkbox" id="s26-2-1"><label for="s26-2-1">Scan barcodes for products on the PO. The "Receiving now" goes up.</label></div>
+      <div class="step"><input type="checkbox" id="s26-2-2"><label for="s26-2-2">Use the +/- buttons to manually adjust if needed.</label></div>
+      <div class="step"><input type="checkbox" id="s26-2-3"><label for="s26-2-3">Tap Commit. Success toast.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">26.3</span> Verify on web</h4>
+      <div class="step"><input type="checkbox" id="s26-3-1"><label for="s26-3-1">Open the PO on the desktop site. "Qty Received" matches what you scanned.</label></div>
+      <div class="step"><input type="checkbox" id="s26-3-2"><label for="s26-3-2">Inventory has gone up.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 27 · MOBILE STOCKTAKE ====== -->
+<section class="section" id="s27">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">27</div>
+    <h3>Mobile — stocktake <span class="role-tag mobile">phone</span></h3>
+    <div class="pill" data-section-pill>0 / 3</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">Stocktake = "I'm walking around the warehouse counting stuff to check the system numbers are right".</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">27.1</span> Scan + adjust</h4>
+      <div class="step"><input type="checkbox" id="s27-1-1"><label for="s27-1-1">Tap <strong>Stocktake</strong>. Camera opens, hint says "Scan any product".</label></div>
+      <div class="step"><input type="checkbox" id="s27-1-2"><label for="s27-1-2">Scan a product. The screen now shows the product's current "On hand" + an input prefilled with that number.</label></div>
+      <div class="step"><input type="checkbox" id="s27-1-3"><label for="s27-1-3">Type a different number (e.g. 1 lower). Reason is prefilled "Stock take" — you can change it. Tap Save.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">27.2</span> No-change handling</h4>
+      <div class="step"><input type="checkbox" id="s27-2-1"><label for="s27-2-1">Scan another product. Leave the count as-is (don't change). Tap Save.</label></div>
+      <div class="step"><input type="checkbox" id="s27-2-2"><label for="s27-2-2">It should say "No change" and just go back to scanning.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">27.3</span> Verify on web</h4>
+      <div class="step"><input type="checkbox" id="s27-3-1"><label for="s27-3-1">On the web, open Inventory. The first product (where you changed the count) should reflect the new number.</label></div>
+      <div class="step"><input type="checkbox" id="s27-3-2"><label for="s27-3-2">Settings → Audit shows ADJUSTMENT rows with reason "Stock take".</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SECTION 28 · EDGE CASES ====== -->
+<section class="section" id="s28">
+  <div class="section-header" onclick="toggle(this)">
+    <div class="num">28</div>
+    <h3>Edge cases &amp; known weirdness</h3>
+    <div class="pill" data-section-pill>0 / 5</div>
+    <div class="chev">▾</div>
+  </div>
+  <div class="section-body">
+    <p class="lead">These are sneaky bugs your dad already knows about. He wants you to confirm they still happen (so we know they haven't been silently fixed) and to test the surrounding behaviour.</p>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">28.1</span> 🐛 Over-receive bug — partial then simple</h4>
+      <div class="bug-box"><strong>Known bug:</strong> if you do a partial receive first, then click the simple "Receive into stock" button, the stock gets over-counted.</div>
+      <div class="step"><input type="checkbox" id="s28-1-1"><label for="s28-1-1">Make a fresh PO with one line, qty 10.</label></div>
+      <div class="step"><input type="checkbox" id="s28-1-2"><label for="s28-1-2">Mark Ordered. Note the product's current On Hand.</label></div>
+      <div class="step"><input type="checkbox" id="s28-1-3"><label for="s28-1-3">Use the partial-receive form to receive 4.</label></div>
+      <div class="step"><input type="checkbox" id="s28-1-4"><label for="s28-1-4">Now click the simple "Receive into stock" button.</label></div>
+      <div class="step"><input type="checkbox" id="s28-1-5"><label for="s28-1-5">Check inventory. If it went up by 14 (not 10), the bug is still there. Note your before/after numbers below.</label></div>
+      <div class="notes"><label>🐛 Bug notes — write before / after numbers</label><textarea data-note placeholder="Before: ___, After: ___, Increase: ___ (should be 10, but might be 14)"></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">28.2</span> 🐛 Simple receive ignores receive-charges</h4>
+      <div class="bug-box"><strong>Known bug:</strong> when you click "Receive into stock" (the simple way), customs duty / handling charges keyed via the partial form get ignored on the cost calculation.</div>
+      <div class="step"><input type="checkbox" id="s28-2-1"><label for="s28-2-1">Make a PO. Use partial-receive to add a "Customs duty" charge of $200 — but don't actually receive any qty (or do a small one).</label></div>
+      <div class="step"><input type="checkbox" id="s28-2-2"><label for="s28-2-2">Then click the simple "Receive into stock" button to finish.</label></div>
+      <div class="step"><input type="checkbox" id="s28-2-3"><label for="s28-2-3">Check the product cost — if it doesn't include the $200 split across the lines, the bug's still there.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">28.3</span> 🐛 Freight zero-out on partial receive</h4>
+      <div class="bug-box"><strong>Known bug:</strong> if you clear the freight field on a follow-up partial receive, it overwrites the original PO freight with 0.</div>
+      <div class="step"><input type="checkbox" id="s28-3-1"><label for="s28-3-1">Make a PO with freight = $50. Mark Ordered.</label></div>
+      <div class="step"><input type="checkbox" id="s28-3-2"><label for="s28-3-2">Open the partial-receive form. Receive any qty. Set the "freight override" field to BLANK (delete what's in it).</label></div>
+      <div class="step"><input type="checkbox" id="s28-3-3"><label for="s28-3-3">Submit. Refresh the PO. If the freight is now $0 instead of $50, the bug is still there.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">28.4</span> 🐛 Partial pick stock timing</h4>
+      <div class="bug-box"><strong>Known quirk:</strong> partial picks don't reduce stock until ALL lines are fully picked. This means you can technically over-promise stock to two different orders.</div>
+      <div class="step"><input type="checkbox" id="s28-4-1"><label for="s28-4-1">Make a Confirmed SO. Use the partial-pick form to pick PART of one line.</label></div>
+      <div class="step"><input type="checkbox" id="s28-4-2"><label for="s28-4-2">Check Inventory — the product's "On hand" should be UNCHANGED (this is the quirk).</label></div>
+      <div class="step"><input type="checkbox" id="s28-4-3"><label for="s28-4-3">Finish picking the rest of the SO. NOW the stock drops.</label></div>
+      <div class="notes"><label>🐛 Bug notes</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="test" data-test>
+      <h4><span class="tnum">28.5</span> Random "click around and break things"</h4>
+      <div class="why">Free play! Click weird buttons. Open big lists. Try things that aren't on this list. Anything that makes you go "huh, that's odd" — write it down here.</div>
+      <div class="step"><input type="checkbox" id="s28-5-1"><label for="s28-5-1">Spend 10–15 minutes randomly using the app like you're a real user.</label></div>
+      <div class="step"><input type="checkbox" id="s28-5-2"><label for="s28-5-2">Try double-clicking save buttons fast.</label></div>
+      <div class="step"><input type="checkbox" id="s28-5-3"><label for="s28-5-3">Try the "back" button after submitting forms — does it cause duplicates?</label></div>
+      <div class="step"><input type="checkbox" id="s28-5-4"><label for="s28-5-4">Resize the window — does anything break at small widths?</label></div>
+      <div class="step"><input type="checkbox" id="s28-5-5"><label for="s28-5-5">Try entering really long text in fields. Or symbols like emoji 🦄.</label></div>
+      <div class="notes"><label>🐛 Free-form bug notes</label><textarea data-note style="min-height:200px" placeholder="Write any bugs, weirdness, or improvement ideas here. Doesn't matter if it's small — write it!"></textarea></div>
+    </div>
+  </div>
+</section>
+
+<div class="summary-card">
+  <h3>🎉 You're done!</h3>
+  <div class="big-num" id="finalCount">0 / 0</div>
+  <p>Tests completed.</p>
+  <p style="margin-top:10px; font-size:13px; opacity: 0.85;">Click "Print" at the top to save a paper copy of your notes — or just leave the tab open and your dad will read your notes from here.</p>
+</div>
+
+</main>
+
+<script>
+  const KEY = "regi-tester-state-v1";
+
+  function loadState() {
+    try { return JSON.parse(localStorage.getItem(KEY) || "{}"); }
+    catch { return {}; }
+  }
+  function saveState(state) {
+    localStorage.setItem(KEY, JSON.stringify(state));
+  }
+
+  const state = loadState();
+
+  // ===== Inject the "AI fix" checkbox into every test card =====
+  document.querySelectorAll(".test").forEach((test, idx) => {
+    const notes = test.querySelector(".notes");
+    if (!notes) return;
+    const id = "aifix-" + idx;
+    const wrap = document.createElement("div");
+    wrap.className = "ai-fix";
+    wrap.innerHTML =
+      '<label for="' + id + '">' +
+        '<input type="checkbox" id="' + id + '" data-ai-fix>' +
+        '<span class="ai-fix-icon">🪄</span>' +
+        '<span class="ai-fix-text">' +
+          '<strong>Flag this bug for the AI to fix</strong>' +
+          '<span class="ai-fix-sub">Tick this and Dad will tell Claude to fix it later</span>' +
+        '</span>' +
+      '</label>';
+    notes.parentElement.insertBefore(wrap, notes);
+  });
+
+  // ===== Wire all checkboxes (steps + ai-fix) =====
+  document.querySelectorAll("input[type=checkbox]").forEach(cb => {
+    if (state.checks && state.checks[cb.id]) cb.checked = true;
+    cb.addEventListener("change", () => {
+      state.checks = state.checks || {};
+      state.checks[cb.id] = cb.checked;
+      saveState(state);
+      if (cb.hasAttribute("data-ai-fix")) {
+        updateAiFlagged(cb);
+        updateAiFixCounter();
+      } else {
+        updateProgress();
+        updateTestDoneStyle(cb);
+        updateSectionPills();
+      }
+    });
+    if (cb.hasAttribute("data-ai-fix")) updateAiFlagged(cb);
+    else updateTestDoneStyle(cb);
+  });
+
+  document.querySelectorAll("textarea[data-note]").forEach((t, idx) => {
+    const key = "n" + idx;
+    if (state.notes && state.notes[key] !== undefined) t.value = state.notes[key];
+    let timeout;
+    t.addEventListener("input", () => {
+      state.notes = state.notes || {};
+      state.notes[key] = t.value;
+      clearTimeout(timeout);
+      timeout = setTimeout(() => saveState(state), 300);
+    });
+  });
+
+  function updateAiFlagged(cb) {
+    const wrap = cb.closest(".ai-fix");
+    const test = cb.closest(".test");
+    if (cb.checked) {
+      wrap && wrap.classList.add("flagged");
+      test && test.classList.add("ai-flagged");
+    } else {
+      wrap && wrap.classList.remove("flagged");
+      test && test.classList.remove("ai-flagged");
+    }
+  }
+
+  function updateAiFixCounter() {
+    const flagged = document.querySelectorAll("[data-ai-fix]:checked").length;
+    const btn = document.getElementById("copyAiFixBtn");
+    const cnt = document.getElementById("aiFixCount");
+    if (cnt) cnt.textContent = flagged;
+    if (btn) {
+      if (flagged === 0) btn.classList.add("empty");
+      else btn.classList.remove("empty");
+    }
+  }
+
+  function copyAiFixList() {
+    const flagged = document.querySelectorAll("[data-ai-fix]:checked");
+    if (flagged.length === 0) {
+      alert("Nothing flagged for AI yet — tick the 🪄 box on any test you want fixed.");
+      return;
+    }
+    const lines = ["Bugs flagged for AI to fix (" + flagged.length + " item" + (flagged.length === 1 ? "" : "s") + "):", ""];
+    flagged.forEach(cb => {
+      const test = cb.closest(".test");
+      const titleEl = test.querySelector("h4");
+      const title = titleEl ? titleEl.innerText.trim() : "(unknown test)";
+      const noteEl = test.querySelector("textarea[data-note]");
+      const note = noteEl && noteEl.value.trim() ? noteEl.value.trim() : "";
+      lines.push("• " + title);
+      if (note) lines.push("    Notes: " + note.replace(/\n/g, "\n    "));
+      lines.push("");
+    });
+    const text = lines.join("\n");
+
+    function fallbackCopy() {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:80vw;height:60vh;z-index:9999;padding:14px;font-family:ui-monospace,monospace;border:2px solid #a855f7;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,0.3);background:white";
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      alert("Couldn't copy automatically — select-all and Cmd+C from the box that just appeared. (It'll close in 30s.)");
+      setTimeout(() => ta.remove(), 30000);
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text)
+        .then(() => alert("Copied " + flagged.length + " flagged item(s) to clipboard. Paste into Claude!"))
+        .catch(fallbackCopy);
+    } else {
+      fallbackCopy();
+    }
+  }
+
+  function updateTestDoneStyle(cb) {
+    const test = cb.closest("[data-test]");
+    if (!test) return;
+    const all = test.querySelectorAll(".step input[type=checkbox]");
+    const checked = test.querySelectorAll(".step input[type=checkbox]:checked");
+    if (all.length > 0 && checked.length === all.length) {
+      test.classList.add("done");
+    } else {
+      test.classList.remove("done");
+    }
+  }
+
+  function updateProgress() {
+    const all = document.querySelectorAll(".step input[type=checkbox]");
+    const done = document.querySelectorAll(".step input[type=checkbox]:checked");
+    const pct = all.length === 0 ? 0 : (done.length / all.length) * 100;
+    document.getElementById("progressBar").style.width = pct + "%";
+    document.getElementById("progressLabel").textContent = done.length + " / " + all.length + " done";
+    const fc = document.getElementById("finalCount");
+    if (fc) fc.textContent = done.length + " / " + all.length;
+  }
+
+  function updateSectionPills() {
+    document.querySelectorAll(".section").forEach(sec => {
+      const all = sec.querySelectorAll(".step input[type=checkbox]");
+      const done = sec.querySelectorAll(".step input[type=checkbox]:checked");
+      const pill = sec.querySelector("[data-section-pill]");
+      if (pill) {
+        pill.textContent = done.length + " / " + all.length;
+        if (all.length > 0 && done.length === all.length) pill.classList.add("done");
+        else pill.classList.remove("done");
+      }
+    });
+  }
+
+  function toggle(headerEl) {
+    headerEl.parentElement.classList.toggle("collapsed");
+  }
+  function expandAll() {
+    document.querySelectorAll(".section").forEach(s => s.classList.remove("collapsed"));
+  }
+  function collapseAll() {
+    document.querySelectorAll(".section").forEach(s => s.classList.add("collapsed"));
+  }
+  function resetAll() {
+    if (!confirm("Reset all progress, AI-fix flags and notes? This can't be undone.")) return;
+    localStorage.removeItem(KEY);
+    location.reload();
+  }
+
+  updateProgress();
+  updateSectionPills();
+  updateAiFixCounter();
+
+  document.querySelectorAll(".section").forEach((s, i) => {
+    if (i > 0) s.classList.add("collapsed");
+  });
+</script>
+
+</body>
+</html>
