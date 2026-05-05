@@ -100,8 +100,19 @@ async function pushInvoice(tenantId: string, soId: string) {
   }
 
   // Resolve the NZ GST income code for this customer's tax rule.
+  // Fail loudly if no fallback name matches in the QBO file — silently omitting
+  // TaxCodeRef makes QBO reject the invoice with a 6000 validation error
+  // ("Make sure all your transactions have a GST rate before you save"),
+  // which is harder to diagnose than the actionable message we throw here.
   const rule = asTaxRule(so.customer.taxRule);
   const taxCode = await resolveTaxCodeId(tenantId, INCOME_FALLBACKS[rule]);
+  if (!taxCode) {
+    throw new Error(
+      `No QBO TaxCode for income rule "${rule}" — tried [${INCOME_FALLBACKS[rule].join(", ")}]. ` +
+      `Customer "${so.customer.name}" (SO ${so.soNumber}) cannot be invoiced. ` +
+      `Fix: add a matching tax code in QBO, or change the customer's tax rule (Settings → Tax shows which rules currently resolve).`,
+    );
+  }
 
   const lines = so.lines.map((l) => ({
     DetailType: "SalesItemLineDetail",
@@ -110,7 +121,7 @@ async function pushInvoice(tenantId: string, soId: string) {
     SalesItemLineDetail: {
       Qty: l.qtyOrdered,
       UnitPrice: Number(l.product.sellPriceNzd),
-      ...(taxCode ? { TaxCodeRef: { value: taxCode.id } } : {}),
+      TaxCodeRef: { value: taxCode.id },
     },
   }));
 
@@ -155,8 +166,18 @@ async function pushBill(tenantId: string, poId: string) {
   }
 
   // Supplier-level tax code (used for product lines and freight).
+  // Same fail-loudly rule as pushInvoice — silent omission produces an
+  // unhelpful QBO 6000 error; the throw here names the supplier so the
+  // operator knows exactly which record to fix.
   const supplierRule = asTaxRule(po.supplier.taxRule);
   const supplierTaxCode = await resolveTaxCodeId(tenantId, EXPENSE_FALLBACKS[supplierRule]);
+  if (!supplierTaxCode) {
+    throw new Error(
+      `No QBO TaxCode for expense rule "${supplierRule}" — tried [${EXPENSE_FALLBACKS[supplierRule].join(", ")}]. ` +
+      `Supplier "${po.supplier.name}" (PO ${po.poNumber}) cannot be billed. ` +
+      `Fix: add a matching tax code in QBO, or change the supplier's tax rule (Settings → Tax shows which rules currently resolve).`,
+    );
+  }
 
   // PO lines are stored in source currency; convert to NZD using the snapshotted
   // fxRate so QBO always receives NZD amounts. The original foreign cost is
@@ -171,7 +192,7 @@ async function pushBill(tenantId: string, poId: string) {
       Description: `${l.product.sku} ${l.product.name} — ${po.currency} ${srcAmount.toFixed(2)} @ ${fxRate.toFixed(6)}`,
       AccountBasedExpenseLineDetail: {
         AccountRef: { value: "1" },
-        ...(supplierTaxCode ? { TaxCodeRef: { value: supplierTaxCode.id } } : {}),
+        TaxCodeRef: { value: supplierTaxCode.id },
       },
     };
   });
@@ -185,14 +206,22 @@ async function pushBill(tenantId: string, poId: string) {
       Description: `Freight — ${po.currency} ${Number(po.freight).toFixed(2)} @ ${fxRate.toFixed(6)}`,
       AccountBasedExpenseLineDetail: {
         AccountRef: { value: "1" },
-        ...(supplierTaxCode ? { TaxCodeRef: { value: supplierTaxCode.id } } : {}),
+        TaxCodeRef: { value: supplierTaxCode.id },
       },
     });
   }
 
   // Custom receive charges — each carries its own rate, so resolve per-charge.
   for (const ch of po.receiveCharges) {
-    const chTaxCode = await resolveTaxCodeId(tenantId, expenseFallbacksForRate(Number(ch.taxRate)));
+    const chRate = Number(ch.taxRate);
+    const chFallbacks = expenseFallbacksForRate(chRate);
+    const chTaxCode = await resolveTaxCodeId(tenantId, chFallbacks);
+    if (!chTaxCode) {
+      throw new Error(
+        `No QBO TaxCode for receive charge "${ch.label}" at rate ${chRate}% — tried [${chFallbacks.join(", ")}]. ` +
+        `PO ${po.poNumber} cannot be billed until a matching code exists in QBO (Settings → Tax).`,
+      );
+    }
     const amountNzd = Number(ch.amountNzd);
 
     billLines.push({
@@ -201,7 +230,7 @@ async function pushBill(tenantId: string, poId: string) {
       Description: `${ch.label}${ch.invoiceRef ? ` (Inv: ${ch.invoiceRef})` : ""} — ${ch.currency} ${Number(ch.amount).toFixed(2)}${ch.currency !== "NZD" ? ` @ ${Number(ch.fxRate).toFixed(6)}` : ""}`,
       AccountBasedExpenseLineDetail: {
         AccountRef: { value: "1" },
-        ...(chTaxCode ? { TaxCodeRef: { value: chTaxCode.id } } : {}),
+        TaxCodeRef: { value: chTaxCode.id },
       },
     });
   }
