@@ -54,11 +54,20 @@ export async function requireSession(): Promise<SessionContext> {
   };
 }
 
-/** Require one of the allowed roles. Throws if not authorized. */
+/**
+ * Require one of the allowed roles. On role mismatch, redirects to /403 (a
+ * friendly forbidden page that lists what the user *can* access).
+ *
+ * Was previously a throw, which surfaced as the generic Next.js error boundary
+ * ("Something went wrong / An error occurred in the Server Components render")
+ * — looks like a crash to the user, even though the gate was working as
+ * intended. `redirect()` from `next/navigation` works in both server
+ * components and server actions, so all 30+ existing call sites are unchanged.
+ */
 export async function requireRole(allowed: Role[]): Promise<SessionContext> {
   const session = await requireSession();
   if (!allowed.includes(session.role)) {
-    throw new Error("Forbidden: insufficient role");
+    redirect("/403");
   }
   return session;
 }
