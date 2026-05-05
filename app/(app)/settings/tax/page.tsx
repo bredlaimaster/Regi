@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { listTaxCodes, INCOME_FALLBACKS, EXPENSE_FALLBACKS, type TaxRule } from "@/lib/quickbooks/tax-codes";
+import { RefreshTaxCodesButton } from "./refresh-button";
 
 type LabelMeta = { label: string; desc: string; variant: "default" | "secondary" | "outline" | "destructive" };
 
@@ -155,7 +156,19 @@ export default async function TaxSettingsPage() {
 
       {conn && (
         <Card>
-          <CardHeader><CardTitle className="text-base">Tax codes in your QuickBooks file</CardTitle></CardHeader>
+          <CardHeader>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <CardTitle className="text-base">Tax codes in your QuickBooks file</CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Connected to QBO realm <code className="font-mono">{conn.realmId}</code>.
+                  Match this against the URL in your QBO browser tab to confirm
+                  you're looking at the same file Regi is.
+                </p>
+              </div>
+              <RefreshTaxCodesButton />
+            </div>
+          </CardHeader>
           <CardContent>
             {qboError ? (
               <p className="text-sm text-red-700">Could not read QBO tax codes: {qboError}</p>
@@ -169,7 +182,7 @@ export default async function TaxSettingsPage() {
               <p className="text-sm text-muted-foreground">No tax codes visible — make sure GST is enabled in your QBO file.</p>
             )}
             <p className="text-xs text-muted-foreground pt-3">
-              If a row above shows <em>Not found</em>, the preferred code name does not exist in this QBO file. Either enable the standard NZ GST codes in QuickBooks (Taxes → Set up tax) or rename one of your existing codes to match a fallback shown above.
+              If a row above shows <em>Not found</em>, the preferred code name does not exist in this QBO file. Either enable the standard NZ GST codes in QuickBooks (Taxes → Set up tax) or rename one of your existing codes to match a fallback shown above. Already added the code in QBO? Click <strong>Refresh from QuickBooks</strong> above — Regi caches the list for up to 60 seconds.
             </p>
           </CardContent>
         </Card>

@@ -25,6 +25,9 @@ import {
   expenseFallbacksForRate,
   resolveTaxCodeId,
   listTaxCodes,
+  invalidateTaxCodeCache,
+  TAX_CODE_CACHE_TTL_MS,
+  _resetTaxCodeCacheForTests,
   type TaxRule,
 } from "@/lib/quickbooks/tax-codes";
 
@@ -46,6 +49,7 @@ function uniqueTenant(): string {
 
 beforeEach(() => {
   mockedFetch.mockReset();
+  _resetTaxCodeCacheForTests();
 });
 
 // ─── Pure data shape ───────────────────────────────────────────────────────────
@@ -220,5 +224,82 @@ describe("listTaxCodes", () => {
     expect(result.income.ZERO.chain).toEqual(INCOME_FALLBACKS.ZERO);
     // Resolved is the second chain entry, not the first
     expect(result.income.ZERO.resolved).toBe("GST Free Income");
+  });
+});
+
+// ─── Cache TTL + invalidation ─────────────────────────────────────────────────
+
+describe("TAX_CODE_CACHE_TTL_MS", () => {
+  it("is a sensible short window (1s ≤ ttl ≤ 5min)", () => {
+    expect(TAX_CODE_CACHE_TTL_MS).toBeGreaterThanOrEqual(1000);
+    expect(TAX_CODE_CACHE_TTL_MS).toBeLessThanOrEqual(5 * 60 * 1000);
+  });
+});
+
+describe("cache TTL", () => {
+  it("re-fetches after the TTL expires", async () => {
+    const tenantId = uniqueTenant();
+    vi.useFakeTimers();
+    try {
+      mockedFetch.mockResolvedValueOnce(asQboResponse({ "GST on Income": "1" }));
+      const a = await resolveTaxCodeId(tenantId, INCOME_FALLBACKS.GST15);
+      expect(a).toEqual({ id: "1", name: "GST on Income" });
+      expect(mockedFetch).toHaveBeenCalledTimes(1);
+
+      // Within TTL — second call hits cache.
+      vi.advanceTimersByTime(TAX_CODE_CACHE_TTL_MS - 1);
+      mockedFetch.mockResolvedValueOnce(asQboResponse({ "GST on Income": "999" }));
+      const b = await resolveTaxCodeId(tenantId, INCOME_FALLBACKS.GST15);
+      expect(b).toEqual({ id: "1", name: "GST on Income" });
+      expect(mockedFetch).toHaveBeenCalledTimes(1);
+
+      // Past TTL — second mock kicks in.
+      vi.advanceTimersByTime(2);
+      const c = await resolveTaxCodeId(tenantId, INCOME_FALLBACKS.GST15);
+      expect(c).toEqual({ id: "999", name: "GST on Income" });
+      expect(mockedFetch).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("invalidateTaxCodeCache", () => {
+  it("forces a re-fetch on the next call", async () => {
+    const tenantId = uniqueTenant();
+    mockedFetch.mockResolvedValueOnce(asQboResponse({ "GST on Income": "1" }));
+    const a = await resolveTaxCodeId(tenantId, INCOME_FALLBACKS.GST15);
+    expect(a?.id).toBe("1");
+    expect(mockedFetch).toHaveBeenCalledTimes(1);
+
+    invalidateTaxCodeCache(tenantId);
+
+    // Second response simulates the operator just adding a new code in QBO —
+    // the cache no longer hides it.
+    mockedFetch.mockResolvedValueOnce(
+      asQboResponse({ "GST on Income": "1", "Out of Scope": "5" }),
+    );
+    const b = await resolveTaxCodeId(tenantId, INCOME_FALLBACKS.EXEMPT);
+    expect(b).toEqual({ id: "5", name: "Out of Scope" });
+    expect(mockedFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("only affects the named tenant — other tenants' caches survive", async () => {
+    const a = uniqueTenant();
+    const b = uniqueTenant();
+    mockedFetch
+      .mockResolvedValueOnce(asQboResponse({ "GST on Income": "A" }))
+      .mockResolvedValueOnce(asQboResponse({ "GST on Income": "B" }));
+    await resolveTaxCodeId(a, INCOME_FALLBACKS.GST15);
+    await resolveTaxCodeId(b, INCOME_FALLBACKS.GST15);
+    expect(mockedFetch).toHaveBeenCalledTimes(2);
+
+    invalidateTaxCodeCache(a);
+
+    // a refetches; b uses cache.
+    mockedFetch.mockResolvedValueOnce(asQboResponse({ "GST on Income": "A2" }));
+    await resolveTaxCodeId(a, INCOME_FALLBACKS.GST15);
+    await resolveTaxCodeId(b, INCOME_FALLBACKS.GST15);
+    expect(mockedFetch).toHaveBeenCalledTimes(3);
   });
 });

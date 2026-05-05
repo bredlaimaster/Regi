@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { enqueueQboSync, processQboSyncJobs } from "@/lib/quickbooks/sync";
-import { listTaxCodes } from "@/lib/quickbooks/tax-codes";
+import { listTaxCodes, invalidateTaxCodeCache } from "@/lib/quickbooks/tax-codes";
 import type { ActionResult } from "@/lib/types";
 
 /**
@@ -80,6 +80,33 @@ export async function listQboTaxCodes(): Promise<ActionResult> {
   if (!conn) return { ok: false, error: "QuickBooks is not connected" };
   try {
     const data = await listTaxCodes(session.tenantId);
+    return { ok: true, data };
+  } catch (e: any) {
+    return { ok: false, error: String(e?.message ?? e) };
+  }
+}
+
+/**
+ * Force a re-fetch of the QBO TaxCode list for this tenant.
+ *
+ * The tax-code list is cached in process memory for performance. A short TTL
+ * already exists, but when an admin has just clicked Save in QBO they want
+ * the change reflected immediately rather than waiting up to TTL seconds —
+ * this action gives them a button for that.
+ *
+ * Returns the freshly-fetched list so the caller can render it without a
+ * second round trip.
+ */
+export async function refreshQboTaxCodes(): Promise<ActionResult> {
+  const session = await requireRole(["ADMIN"]);
+  const conn = await prisma.qboConnection.findUnique({ where: { tenantId: session.tenantId } });
+  if (!conn) return { ok: false, error: "QuickBooks is not connected" };
+
+  invalidateTaxCodeCache(session.tenantId);
+
+  try {
+    const data = await listTaxCodes(session.tenantId);
+    revalidatePath("/settings/tax");
     return { ok: true, data };
   } catch (e: any) {
     return { ok: false, error: String(e?.message ?? e) };

@@ -8,8 +8,11 @@
  * Names can vary slightly between QBO tenants (older NZ files use "GST Free
  * Income/Expenses", newer ones use "Zero Rated"/"Zero Rated Expenses"), so
  * each rule resolves against a fallback chain — the first name that exists
- * in the tenant's QBO file wins. If nothing matches we return undefined and
- * the caller omits TaxCodeRef, letting QBO apply its company default.
+ * in the tenant's QBO file wins.
+ *
+ * `pushInvoice` and `pushBill` in lib/quickbooks/sync.ts treat a missing
+ * resolution as a hard error (named after May 2026 QBO 6000 incident) — the
+ * caller no longer silently omits TaxCodeRef.
  *
  * All amounts pushed to QBO are GST-EXCLUSIVE NZD — invoices and bills set
  * GlobalTaxCalculation: "TaxExcluded" so QBO adds 15% based on the per-line
@@ -55,15 +58,47 @@ export function expenseFallbacksForRate(rate: number): readonly string[] {
 
 type TaxCodeEntry = { Id: string; Name: string };
 
-const taxCodeCache = new Map<string, Promise<Map<string, string>>>();
+/**
+ * In-memory cache of QBO tax codes per tenant.
+ *
+ * Original implementation cached for the lifetime of the Node process — that
+ * meant adding a tax code in QBO required either an ECS task restart or
+ * waiting forever (the May 2026 "I added GST on Income but Regi can't see it"
+ * incident was caused by exactly this). We now expire entries after a short
+ * TTL and expose `invalidateTaxCodeCache` for an admin "Refresh" button.
+ *
+ * The TTL is short (60s) because tax-code edits are rare but always
+ * latency-sensitive when they happen — an admin who just clicked "Save" in
+ * QBO wants the change reflected on their next page view.
+ */
+type CacheEntry = {
+  promise: Promise<Map<string, string>>;
+  /** Epoch-ms when this entry stops being trusted. */
+  expiresAt: number;
+};
+
+export const TAX_CODE_CACHE_TTL_MS = 60_000;
+const taxCodeCache = new Map<string, CacheEntry>();
+
+/** Drop the cached TaxCode list for one tenant — used by the manual refresh flow. */
+export function invalidateTaxCodeCache(tenantId: string): void {
+  taxCodeCache.delete(tenantId);
+}
+
+/** Drop everything — used by tests. */
+export function _resetTaxCodeCacheForTests(): void {
+  taxCodeCache.clear();
+}
 
 /**
  * Fetch every TaxCode from the tenant's QBO file into a Name→Id map.
- * Memoised per tenant for the lifetime of the process.
+ * Memoised per tenant for `TAX_CODE_CACHE_TTL_MS` ms.
  */
 async function getTaxCodeMap(tenantId: string): Promise<Map<string, string>> {
+  const now = Date.now();
   const cached = taxCodeCache.get(tenantId);
-  if (cached) return cached;
+  if (cached && cached.expiresAt > now) return cached.promise;
+  // Either no entry or it has expired — refetch.
 
   const promise = (async () => {
     const map = new Map<string, string>();
@@ -75,11 +110,12 @@ async function getTaxCodeMap(tenantId: string): Promise<Map<string, string>> {
     return map;
   })();
 
-  taxCodeCache.set(tenantId, promise);
+  taxCodeCache.set(tenantId, { promise, expiresAt: now + TAX_CODE_CACHE_TTL_MS });
   try {
     return await promise;
   } catch (e) {
-    taxCodeCache.delete(tenantId); // don't cache failures
+    // Don't cache failures — clear so the next call retries afresh.
+    taxCodeCache.delete(tenantId);
     throw e;
   }
 }
