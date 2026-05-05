@@ -11,31 +11,31 @@ datasource db {
 // ─── Core tenant / auth ───────────────────────────────────────────────────────
 
 model Tenant {
-  id          String   @id @default(cuid())
-  name        String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  users            User[]
-  products         Product[]
-  suppliers        Supplier[]
-  customers        Customer[]
-  purchaseOrders   PurchaseOrder[]
-  salesOrders      SalesOrder[]
-  qboConnection    QboConnection?
-  brands           Brand[]
-  channels         Channel[]
-  territories      Territory[]
-  budgets          Budget[]
-  batches          Batch[]
-  reportSnapshots  ReportSnapshot[]
-  scheduledReports ScheduledReport[]
-  reportDeliveries ReportDelivery[]
-  proformaInvoices ProformaInvoice[]
+  users             User[]
+  products          Product[]
+  suppliers         Supplier[]
+  customers         Customer[]
+  purchaseOrders    PurchaseOrder[]
+  salesOrders       SalesOrder[]
+  qboConnection     QboConnection?
+  brands            Brand[]
+  channels          Channel[]
+  territories       Territory[]
+  budgets           Budget[]
+  batches           Batch[]
+  reportSnapshots   ReportSnapshot[]
+  scheduledReports  ScheduledReport[]
+  reportDeliveries  ReportDelivery[]
+  proformaInvoices  ProformaInvoice[]
   stockReservations StockReservation[]
-  creditNotes      CreditNote[]
-  priceGroups      PriceGroup[]
-  bugReports       BugReport[]
+  creditNotes       CreditNote[]
+  priceGroups       PriceGroup[]
+  bugReports        BugReport[]
 }
 
 model User {
@@ -49,9 +49,9 @@ model User {
   createdAt    DateTime @default(now())
 
   // Rep relations
-  customers       Customer[]    @relation("CustomerRep")
-  budgets         Budget[]
-  reservations    StockReservation[] @relation("ReservationRep")
+  customers    Customer[]         @relation("CustomerRep")
+  budgets      Budget[]
+  reservations StockReservation[] @relation("ReservationRep")
 
   @@index([tenantId])
 }
@@ -66,12 +66,12 @@ enum Role {
 
 /// Brand (e.g. Silkymit, Inspired Beauty, Hask, Nizoral, Sebapharma)
 model Brand {
-  id        String   @id @default(cuid())
-  name      String
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  products  Product[]
-  budgets   Budget[]
+  id       String    @id @default(cuid())
+  name     String
+  tenantId String
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  products Product[]
+  budgets  Budget[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -106,42 +106,42 @@ model Territory {
 // ─── Product ──────────────────────────────────────────────────────────────────
 
 model Product {
-  id            String   @id @default(cuid())
-  sku           String   @unique
-  name          String
-  description   String?
-  unit          String   @default("EA")
-  sellPriceNzd  Decimal  @db.Decimal(10,2)
-  reorderPoint  Int      @default(0)
-  imageUrl      String?
-  notes         String?
-  tenantId      String
-  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  supplierId    String?
-  supplier      Supplier? @relation(fields: [supplierId], references: [id])
+  id           String    @id @default(cuid())
+  sku          String    @unique
+  name         String
+  description  String?
+  unit         String    @default("EA")
+  sellPriceNzd Decimal   @db.Decimal(10, 2)
+  reorderPoint Int       @default(0)
+  imageUrl     String?
+  notes        String?
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplierId   String?
+  supplier     Supplier? @relation(fields: [supplierId], references: [id])
 
   // Phase A additions
-  brandId       String?
-  brand         Brand?   @relation(fields: [brandId], references: [id])
-  costNzd       Decimal? @db.Decimal(12,4)  // rolling landed-cost average (NZD per unit)
-  caseQty       Int      @default(1)         // units per carton / case
-  isTester      Boolean  @default(false)
-  active        Boolean  @default(true)
+  brandId  String?
+  brand    Brand?   @relation(fields: [brandId], references: [id])
+  costNzd  Decimal? @db.Decimal(12, 4) // rolling landed-cost average (NZD per unit)
+  caseQty  Int      @default(1) // units per carton / case
+  isTester Boolean  @default(false)
+  active   Boolean  @default(true)
 
   // Client data fields
-  supplierCode  String?                      // Supplier's own part number (e.g. 14099-10, 34316H)
-  binLocation   String?                      // Warehouse bin location (e.g. F08B01, G07A01)
-  unitBarcode   String?                      // Unit-level EAN/UPC barcode
-  caseBarcode   String?                      // Case-level barcode
+  supplierCode String? // Supplier's own part number (e.g. 14099-10, 34316H)
+  binLocation  String? // Warehouse bin location (e.g. F08B01, G07A01)
+  unitBarcode  String? // Unit-level EAN/UPC barcode
+  caseBarcode  String? // Case-level barcode
 
-  stockLevel    StockLevel?
-  transactions  InventoryTransaction[]
-  poLines       PurchaseOrderLine[]
-  soLines       SalesOrderLine[]
-  batches       Batch[]
-  reservations  StockReservation[]
-  prices        ProductPrice[]
-  images        ProductImage[]
+  stockLevel   StockLevel?
+  transactions InventoryTransaction[]
+  poLines      PurchaseOrderLine[]
+  soLines      SalesOrderLine[]
+  batches      Batch[]
+  reservations StockReservation[]
+  prices       ProductPrice[]
+  images       ProductImage[]
 
   @@index([tenantId])
   @@index([tenantId, active])
@@ -165,8 +165,8 @@ model PriceGroup {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  prices     ProductPrice[]
-  customers  Customer[]
+  prices    ProductPrice[]
+  customers Customer[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -176,13 +176,13 @@ model PriceGroup {
 /// Price resolution: find row matching (productId, priceGroupId) with largest
 /// minQty <= order qty. If no match, fall back to product.sellPriceNzd.
 model ProductPrice {
-  id            String     @id @default(cuid())
-  productId     String
-  product       Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
-  priceGroupId  String
-  priceGroup    PriceGroup @relation(fields: [priceGroupId], references: [id], onDelete: Cascade)
-  unitPrice     Decimal    @db.Decimal(10,2)
-  minQty        Int        @default(1)   // quantity-break threshold
+  id           String     @id @default(cuid())
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  priceGroupId String
+  priceGroup   PriceGroup @relation(fields: [priceGroupId], references: [id], onDelete: Cascade)
+  unitPrice    Decimal    @db.Decimal(10, 2)
+  minQty       Int        @default(1) // quantity-break threshold
 
   @@unique([productId, priceGroupId, minQty])
   @@index([productId, priceGroupId])
@@ -192,25 +192,25 @@ model ProductPrice {
 // ─── Supplier ─────────────────────────────────────────────────────────────────
 
 model Supplier {
-  id            String   @id @default(cuid())
-  name          String
-  contactName   String?
-  email         String?
-  phone         String?
-  address       String?
-  currency      String   @default("NZD")
-  acctCode      String?                    // Accounting shortcode (e.g. MURRELL, BURTS)
-  paymentTerms  String?                    // e.g. "20th month", "60 days invoice"
-  taxRule       String   @default("GST15") // GST15 | ZERO | IMPORT_GST | EXEMPT
-  tenantId      String
-  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id           String  @id @default(cuid())
+  name         String
+  contactName  String?
+  email        String?
+  phone        String?
+  address      String?
+  currency     String  @default("NZD")
+  acctCode     String? // Accounting shortcode (e.g. MURRELL, BURTS)
+  paymentTerms String? // e.g. "20th month", "60 days invoice"
+  taxRule      String  @default("GST15") // GST15 | ZERO | IMPORT_GST | EXEMPT
+  tenantId     String
+  tenant       Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   // Phase C — Unleashed-style supplier fields
   gstVatNumber      String?
   bankName          String?
   bankBranch        String?
   bankAccount       String?
-  minimumOrderValue Decimal? @db.Decimal(12,2)
+  minimumOrderValue Decimal? @db.Decimal(12, 2)
   deliveryLeadDays  Int?
   notes             String?
   /// Postal address JSON: { name?, line1, line2?, suburb?, city?, state?, postcode?, country? }
@@ -253,7 +253,7 @@ model SupplierContact {
 
 /// Address JSON shape: { line1, line2?, city, postcode?, country }
 model Customer {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
   contactName String?
   email       String?
@@ -261,7 +261,7 @@ model Customer {
   /// Legacy single-address field (kept for migration compatibility; prefer billTo)
   address     String?
   tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant      Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   // Phase A additions
   channelId   String?
@@ -276,26 +276,29 @@ model Customer {
   shipTos     Json?
 
   // Phase B — financial / pricing
-  creditLimit   Decimal?    @db.Decimal(12,2)
-  paymentTerms  String?
-  priceGroupId  String?
-  priceGroup    PriceGroup? @relation(fields: [priceGroupId], references: [id])
+  creditLimit  Decimal?    @db.Decimal(12, 2)
+  paymentTerms String?
+  priceGroupId String?
+  priceGroup   PriceGroup? @relation(fields: [priceGroupId], references: [id])
 
   // Phase D — Unleashed-style customer fields
   acctCode        String?
-  currency        String     @default("NZD")
+  currency        String  @default("NZD")
   taxNumber       String?
-  taxRule         String     @default("GST15") // matches supplier taxRule
+  taxRule         String  @default("GST15") // matches supplier taxRule
   notes           String?
   /// Postal address: { name?, line1, line2?, suburb?, city?, state?, postcode?, country? }
   postalAddress   Json?
   /// Physical address (same shape)
   physicalAddress Json?
 
-  salesOrders  SalesOrder[]
-  reservations StockReservation[]
-  creditNotes  CreditNote[]
-  contacts     CustomerContact[]
+  salesOrders       SalesOrder[]
+  reservations      StockReservation[]
+  creditNotes       CreditNote[]
+  contacts          CustomerContact[]
+  portalUsers       CustomerUser[]
+  portalInvitations PortalInvitation[]
+  portalAuditEvents PortalAuditEvent[]
 
   @@index([tenantId])
   @@index([tenantId, channelId])
@@ -333,22 +336,22 @@ model CustomerContact {
 // ─── Stock ────────────────────────────────────────────────────────────────────
 
 model StockLevel {
-  productId   String   @id
-  qty         Int      @default(0)
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String  @id
+  qty       Int     @default(0)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 model InventoryTransaction {
-  id          String   @id @default(cuid())
+  id          String          @id @default(cuid())
   productId   String
   qtyChange   Int
   type        TransactionType
   referenceId String?
   notes       String?
   userId      String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime        @default(now())
   tenantId    String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product     Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, createdAt])
   @@index([productId, createdAt])
@@ -377,9 +380,9 @@ model Batch {
   expiryDate  DateTime? @db.Date
   qtyReceived Int
   qtyOnHand   Int       @default(0)
-  costNzd     Decimal?  @db.Decimal(12,4)  // landed unit cost NZD at receipt
+  costNzd     Decimal?  @db.Decimal(12, 4) // landed unit cost NZD at receipt
   receivedAt  DateTime  @default(now())
-  poId        String?                        // source PO for traceability
+  poId        String? // source PO for traceability
   notes       String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -391,28 +394,28 @@ model Batch {
 // ─── Purchase Orders ──────────────────────────────────────────────────────────
 
 model PurchaseOrder {
-  id            String              @id @default(cuid())
-  poNumber      String              @unique
-  supplierId    String
-  status        POStatus            @default(DRAFT)
-  orderDate     DateTime            @default(now())
-  expectedDate  DateTime?
-  currency      String              @default("NZD")
-  fxRate        Decimal             @default(1) @db.Decimal(14,8)
-  fxRateDate    DateTime?
-  totalCost     Decimal?            @db.Decimal(12,2)
-  freight       Decimal?            @db.Decimal(10,2)
-  totalCostNzd  Decimal?            @db.Decimal(12,2)
-  freightNzd    Decimal?            @db.Decimal(10,2)
-  notes         String?
-  tenantId      String
-  supplier      Supplier            @relation(fields: [supplierId], references: [id])
-  tenant        Tenant              @relation(fields: [tenantId], references: [id])
-  lines         PurchaseOrderLine[]
+  id             String              @id @default(cuid())
+  poNumber       String              @unique
+  supplierId     String
+  status         POStatus            @default(DRAFT)
+  orderDate      DateTime            @default(now())
+  expectedDate   DateTime?
+  currency       String              @default("NZD")
+  fxRate         Decimal             @default(1) @db.Decimal(14, 8)
+  fxRateDate     DateTime?
+  totalCost      Decimal?            @db.Decimal(12, 2)
+  freight        Decimal?            @db.Decimal(10, 2)
+  totalCostNzd   Decimal?            @db.Decimal(12, 2)
+  freightNzd     Decimal?            @db.Decimal(10, 2)
+  notes          String?
+  tenantId       String
+  supplier       Supplier            @relation(fields: [supplierId], references: [id])
+  tenant         Tenant              @relation(fields: [tenantId], references: [id])
+  lines          PurchaseOrderLine[]
   receiveCharges PoReceiveCharge[]
-  qboBillId     String?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  qboBillId      String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
@@ -432,7 +435,7 @@ model PurchaseOrderLine {
   productId     String
   qtyOrdered    Int
   qtyReceived   Int           @default(0)
-  unitCost      Decimal       @db.Decimal(12,4)
+  unitCost      Decimal       @db.Decimal(12, 4)
   purchaseOrder PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
   product       Product       @relation(fields: [productId], references: [id])
 
@@ -442,26 +445,26 @@ model PurchaseOrderLine {
 // ─── Sales Orders ─────────────────────────────────────────────────────────────
 
 model SalesOrder {
-  id               String           @id @default(cuid())
-  soNumber         String           @unique
-  customerId       String
-  status           SOStatus         @default(DRAFT)
-  orderDate        DateTime         @default(now())
-  shippedDate      DateTime?
-  trackingRef      String?
-  notes            String?
-  tenantId         String
-  customer         Customer         @relation(fields: [customerId], references: [id])
-  tenant           Tenant           @relation(fields: [tenantId], references: [id])
-  lines            SalesOrderLine[]
-  qboInvoiceId     String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  id           String           @id @default(cuid())
+  soNumber     String           @unique
+  customerId   String
+  status       SOStatus         @default(DRAFT)
+  orderDate    DateTime         @default(now())
+  shippedDate  DateTime?
+  trackingRef  String?
+  notes        String?
+  tenantId     String
+  customer     Customer         @relation(fields: [customerId], references: [id])
+  tenant       Tenant           @relation(fields: [tenantId], references: [id])
+  lines        SalesOrderLine[]
+  qboInvoiceId String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 
   // Phase I additions
-  selectedShipTo   Json?            // { label?, line1, city, postcode?, country }
-  discountPct      Decimal?         @db.Decimal(5,2)  // order-level discount %
-  isProforma       Boolean          @default(false)
+  selectedShipTo   Json? // { label?, line1, city, postcode?, country }
+  discountPct      Decimal?           @db.Decimal(5, 2) // order-level discount %
+  isProforma       Boolean            @default(false)
   proformaIssuedAt DateTime?
   creditNotes      CreditNote[]
   reservations     StockReservation[]
@@ -486,9 +489,9 @@ model SalesOrderLine {
   soId        String
   productId   String
   qtyOrdered  Int
-  qtyPicked   Int        @default(0)   // Phase I: partial picks
-  unitPrice   Decimal    @default(0)   @db.Decimal(10,2)
-  discountPct Decimal    @default(0)   @db.Decimal(5,2)   // Phase I: per-line discount %
+  qtyPicked   Int        @default(0) // Phase I: partial picks
+  unitPrice   Decimal    @default(0) @db.Decimal(10, 2)
+  discountPct Decimal    @default(0) @db.Decimal(5, 2) // Phase I: per-line discount %
   salesOrder  SalesOrder @relation(fields: [soId], references: [id], onDelete: Cascade)
   product     Product    @relation(fields: [productId], references: [id])
 
@@ -500,16 +503,16 @@ model SalesOrderLine {
 /// A proforma is generated from a DRAFT/CONFIRMED SO. When the SO ships it
 /// becomes a tax invoice. Proformas can be emailed to customers for pre-payment.
 model ProformaInvoice {
-  id         String   @id @default(cuid())
+  id         String      @id @default(cuid())
   tenantId   String
-  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  soId       String   @unique
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  soId       String      @unique
   salesOrder SalesOrder? @relation(fields: [soId], references: [id], onDelete: Cascade)
-  pfNumber   String   @unique
-  issuedAt   DateTime @default(now())
+  pfNumber   String      @unique
+  issuedAt   DateTime    @default(now())
   expiresAt  DateTime?
   notes      String?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime    @default(now())
 
   @@index([tenantId])
 }
@@ -518,24 +521,24 @@ model ProformaInvoice {
 
 /// Reserve units for a customer / sales rep before an SO is created.
 model StockReservation {
-  id          String    @id @default(cuid())
+  id          String      @id @default(cuid())
   tenantId    String
-  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   productId   String
-  product     Product   @relation(fields: [productId], references: [id])
+  product     Product     @relation(fields: [productId], references: [id])
   customerId  String?
-  customer    Customer? @relation(fields: [customerId], references: [id])
+  customer    Customer?   @relation(fields: [customerId], references: [id])
   repId       String?
-  rep         User?     @relation("ReservationRep", fields: [repId], references: [id])
+  rep         User?       @relation("ReservationRep", fields: [repId], references: [id])
   soId        String?
   salesOrder  SalesOrder? @relation(fields: [soId], references: [id])
   qtyReserved Int
   expiresAt   DateTime?
   notes       String?
-  released    Boolean   @default(false)
+  released    Boolean     @default(false)
   releasedAt  DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   @@index([tenantId, productId])
   @@index([tenantId, customerId])
@@ -545,30 +548,30 @@ model StockReservation {
 
 /// Auto-generated 2.5% credit on qualifying shipments (or manual recharges).
 model CreditNote {
-  id           String    @id @default(cuid())
-  tenantId     String
-  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  cnNumber     String    @unique
-  soId         String?
-  salesOrder   SalesOrder? @relation(fields: [soId], references: [id])
-  customerId   String
-  customer     Customer  @relation(fields: [customerId], references: [id])
-  amountNzd    Decimal   @db.Decimal(12,2)
-  reason       CreditNoteReason
-  notes        String?
-  qboCreditId  String?
-  issuedAt     DateTime  @default(now())
-  createdAt    DateTime  @default(now())
+  id          String           @id @default(cuid())
+  tenantId    String
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  cnNumber    String           @unique
+  soId        String?
+  salesOrder  SalesOrder?      @relation(fields: [soId], references: [id])
+  customerId  String
+  customer    Customer         @relation(fields: [customerId], references: [id])
+  amountNzd   Decimal          @db.Decimal(12, 2)
+  reason      CreditNoteReason
+  notes       String?
+  qboCreditId String?
+  issuedAt    DateTime         @default(now())
+  createdAt   DateTime         @default(now())
 
   @@index([tenantId, customerId])
   @@index([tenantId, issuedAt])
 }
 
 enum CreditNoteReason {
-  AUTO_REBATE       // 2.5% on qualifying shipment
-  RECHARGE          // customer recharge / partial replacement
-  RETURN            // goods return
-  PRICE_CORRECTION  // price error correction
+  AUTO_REBATE // 2.5% on qualifying shipment
+  RECHARGE // customer recharge / partial replacement
+  RETURN // goods return
+  PRICE_CORRECTION // price error correction
   OTHER
 }
 
@@ -577,23 +580,23 @@ enum CreditNoteReason {
 /// Monthly budget entries. period = 1–12, fiscalYear is the April-start year
 /// e.g. fiscal year 2025 = April 2025 – March 2026.
 model Budget {
-  id          String    @id @default(cuid())
+  id          String         @id @default(cuid())
   tenantId    String
-  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  fiscalYear  Int                     // e.g. 2025
-  period      Int                     // 1–12 (1 = April)
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fiscalYear  Int // e.g. 2025
+  period      Int // 1–12 (1 = April)
   lineType    BudgetLineType
-  amountNzd   Decimal   @db.Decimal(14,2)
+  amountNzd   Decimal        @db.Decimal(14, 2)
   brandId     String?
-  brand       Brand?    @relation(fields: [brandId], references: [id])
+  brand       Brand?         @relation(fields: [brandId], references: [id])
   channelId   String?
-  channel     Channel?  @relation(fields: [channelId], references: [id])
+  channel     Channel?       @relation(fields: [channelId], references: [id])
   territoryId String?
-  territory   Territory? @relation(fields: [territoryId], references: [id])
+  territory   Territory?     @relation(fields: [territoryId], references: [id])
   repId       String?
-  rep         User?     @relation(fields: [repId], references: [id])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  rep         User?          @relation(fields: [repId], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   @@unique([tenantId, fiscalYear, period, lineType, brandId, channelId, territoryId, repId])
   @@index([tenantId, fiscalYear, period])
@@ -613,13 +616,13 @@ enum BudgetLineType {
 
 /// Frozen monthly snapshot of a report's computed data (for historical accuracy)
 model ReportSnapshot {
-  id         String   @id @default(cuid())
-  tenantId   String
-  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  reportKey  String                      // e.g. "monthly-sales-analysis"
-  period     String                      // e.g. "2025-04" (YYYY-MM)
-  data       Json                        // serialized report payload
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  reportKey String // e.g. "monthly-sales-analysis"
+  period    String // e.g. "2025-04" (YYYY-MM)
+  data      Json // serialized report payload
+  createdAt DateTime @default(now())
 
   @@unique([tenantId, reportKey, period])
   @@index([tenantId, reportKey])
@@ -627,16 +630,16 @@ model ReportSnapshot {
 
 /// Scheduled report definition (which report, when to run, who receives it)
 model ScheduledReport {
-  id          String   @id @default(cuid())
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  reportKey   String
-  cronExpr    String   @default("0 8 1 * *")  // default: 8am on 1st of month
-  recipients  Json                              // string[] of email addresses
-  enabled     Boolean  @default(true)
-  lastRunAt   DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String    @id @default(cuid())
+  tenantId   String
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  reportKey  String
+  cronExpr   String    @default("0 8 1 * *") // default: 8am on 1st of month
+  recipients Json // string[] of email addresses
+  enabled    Boolean   @default(true)
+  lastRunAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@index([tenantId])
 }
@@ -649,7 +652,7 @@ model ReportDelivery {
   reportKey      String
   period         String
   recipientEmail String
-  status         String   @default("SENT")   // SENT | FAILED
+  status         String   @default("SENT") // SENT | FAILED
   resendId       String?
   error          String?
   deliveredAt    DateTime @default(now())
@@ -660,48 +663,48 @@ model ReportDelivery {
 // ─── QBO ─────────────────────────────────────────────────────────────────────
 
 model QboConnection {
-  id                     String    @id @default(cuid())
-  tenantId               String    @unique
-  realmId                String
-  accessToken            String
-  refreshTokenEnc        String
-  expiresAt              DateTime              // Access token expiry (~1 hr)
-  refreshTokenExpiresAt  DateTime?             // Refresh token expiry (~100 days)
-  createdAt              DateTime  @default(now())
-  updatedAt              DateTime  @updatedAt
-  tenant                 Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id                    String    @id @default(cuid())
+  tenantId              String    @unique
+  realmId               String
+  accessToken           String
+  refreshTokenEnc       String
+  expiresAt             DateTime // Access token expiry (~1 hr)
+  refreshTokenExpiresAt DateTime? // Refresh token expiry (~100 days)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  tenant                Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 // ─── PO Receiving charges ─────────────────────────────────────────────────────
 
 /// Additional charges (freight, customs, handling, etc.) captured at PO receive time
 model PoReceiveCharge {
-  id         String        @id @default(cuid())
-  poId       String
-  po         PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
-  label      String                        // e.g. "Freight", "Customs duty", "Handling"
-  amount     Decimal       @db.Decimal(12,2) // In charge currency
-  currency   String        @default("NZD")  // Currency of the charge (may differ from PO)
-  fxRate     Decimal       @default(1) @db.Decimal(14,8) // FX rate to NZD at receive time
-  amountNzd  Decimal       @db.Decimal(12,2) // Converted to NZD
-  taxRate    Decimal       @default(0) @db.Decimal(5,2) // Tax rate (e.g. 15.00 for GST, 0 for zero-rated)
-  taxAmountNzd Decimal     @default(0) @db.Decimal(12,2) // Tax amount in NZD
-  invoiceRef String?                        // Supplier invoice number
-  createdAt  DateTime      @default(now())
+  id           String        @id @default(cuid())
+  poId         String
+  po           PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  label        String // e.g. "Freight", "Customs duty", "Handling"
+  amount       Decimal       @db.Decimal(12, 2) // In charge currency
+  currency     String        @default("NZD") // Currency of the charge (may differ from PO)
+  fxRate       Decimal       @default(1) @db.Decimal(14, 8) // FX rate to NZD at receive time
+  amountNzd    Decimal       @db.Decimal(12, 2) // Converted to NZD
+  taxRate      Decimal       @default(0) @db.Decimal(5, 2) // Tax rate (e.g. 15.00 for GST, 0 for zero-rated)
+  taxAmountNzd Decimal       @default(0) @db.Decimal(12, 2) // Tax amount in NZD
+  invoiceRef   String? // Supplier invoice number
+  createdAt    DateTime      @default(now())
 
   @@index([poId])
 }
 
 model QboSyncJob {
-  id          String   @id @default(cuid())
-  tenantId    String
-  entityType  String
-  entityId    String
-  status      String   @default("PENDING")
-  attempts    Int      @default(0)
-  lastError   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  tenantId   String
+  entityType String
+  entityId   String
+  status     String   @default("PENDING")
+  attempts   Int      @default(0)
+  lastError  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([tenantId, status])
 }
@@ -711,11 +714,11 @@ model QboSyncJob {
 /// Daily FX rates sourced from Frankfurter.app (ECB reference rates).
 /// nzdPerUnit = number of NZD per 1 unit of the given foreign currency.
 model ExchangeRate {
-  date        DateTime @db.Date
-  currency    String
-  nzdPerUnit  Decimal  @db.Decimal(14,8)
-  source      String   @default("frankfurter")
-  createdAt   DateTime @default(now())
+  date       DateTime @db.Date
+  currency   String
+  nzdPerUnit Decimal  @db.Decimal(14, 8)
+  source     String   @default("frankfurter")
+  createdAt  DateTime @default(now())
 
   @@id([date, currency])
   @@index([currency, date])
@@ -729,10 +732,10 @@ model BugReport {
   id            String    @id @default(cuid())
   tenantId      String
   tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  description   String                                     // free-form, can be long
-  affectedAreas String[]                                   // canonical keys from lib/bug-areas.ts
-  driveLink     String?                                    // optional Google Drive folder/file URL
-  reporter      String?                                    // free-text, e.g. "son", optional
+  description   String // free-form, can be long
+  affectedAreas String[] // canonical keys from lib/bug-areas.ts
+  driveLink     String? // optional Google Drive folder/file URL
+  reporter      String? // free-text, e.g. "son", optional
   solved        Boolean   @default(false)
   resolvedAt    DateTime?
   /// Tester or admin flags a bug for the AI to fix in a future pass. Orthogonal
@@ -760,11 +763,118 @@ model ProductImage {
   productId   String
   product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   bytes       Bytes
-  contentType String                 // image/jpeg | image/png | image/webp | image/gif
-  filename    String?                // original filename for download / display
-  size        Int                    // bytes; useful for UI display + caps
+  contentType String // image/jpeg | image/png | image/webp | image/gif
+  filename    String? // original filename for download / display
+  size        Int // bytes; useful for UI display + caps
   order       Int      @default(0)
   createdAt   DateTime @default(now())
 
   @@index([productId, order])
+}
+
+// ─── Customer-portal auth (Phase 1) ──────────────────────────────────────────
+//
+// Customer-side login is intentionally a separate identity from the staff
+// `User` model. Staff use cookie `nz_inv_session`; portal users use
+// `nz_inv_portal`. They never share a session, can't impersonate each other,
+// and can co-exist in the same browser.
+//
+// Tenant scoping: every CustomerUser belongs to a Customer, which belongs to
+// a Tenant. The portal session helper resolves and pins the customerId on
+// every request — server actions then `assertCustomer(row.customerId, sess.customerId)`
+// the same way staff actions `assertTenant(row.tenantId, sess.tenantId)`.
+
+/// One login identity belonging to one Customer. A Customer can have many
+/// (e.g. a procurement team). At least one of them needs canManageUsers=true
+/// so the customer side can rotate its own people without staff intervention.
+model CustomerUser {
+  id           String   @id @default(cuid())
+  customerId   String
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  email        String   @unique // global uniqueness for login
+  passwordHash String // bcrypt cost 12
+  name         String?
+
+  // Permissions inside this user's customer scope
+  canPlaceOrders  Boolean @default(true)
+  canViewInvoices Boolean @default(true)
+  canManageUsers  Boolean @default(false) // can invite / revoke peers
+
+  // 2FA — wired up in Phase 2.1; column present now so migrations don't move
+  totpSecretEnc String? // encrypted at rest
+  totpEnabled   Boolean @default(false)
+
+  // Lifecycle / safety
+  invitedById    String? // User.id of staff who invited
+  acceptedAt     DateTime? // when the invite was redeemed
+  lastSignInAt   DateTime?
+  failedAttempts Int       @default(0)
+  lockedUntil    DateTime? // soft lockout window
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  backupCodes BackupCode[]
+  auditEvents PortalAuditEvent[]
+
+  @@index([customerId])
+}
+
+/// Single-use, time-limited invitation token. Token is delivered in an email
+/// link; we store only its hash so a DB read leak doesn't grant account access.
+/// Resending an invitation rotates the token (old one becomes unusable).
+model PortalInvitation {
+  id              String    @id @default(cuid())
+  customerId      String
+  customer        Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  email           String
+  tokenHash       String    @unique // bcrypt-hashed token
+  invitedById     String? // User.id of staff who sent it
+  expiresAt       DateTime // typically createdAt + 24h
+  acceptedAt      DateTime? // single-use: null until redeemed
+  createdAt       DateTime  @default(now())
+  // Permissions baked into the invite — applied to the new CustomerUser on accept.
+  canPlaceOrders  Boolean   @default(true)
+  canViewInvoices Boolean   @default(true)
+  canManageUsers  Boolean   @default(false)
+
+  @@index([customerId, expiresAt])
+  @@index([email])
+}
+
+/// Per-user 2FA recovery codes. Eight are generated at TOTP enrolment, each
+/// is bcrypt-hashed at rest, and each can be used exactly once. When the
+/// last one is used, the user's Account → Security page nags them to
+/// regenerate.
+model BackupCode {
+  id             String       @id @default(cuid())
+  customerUserId String
+  user           CustomerUser @relation(fields: [customerUserId], references: [id], onDelete: Cascade)
+  codeHash       String // bcrypt cost 10
+  usedAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([customerUserId])
+}
+
+/// Append-only audit trail of portal authentication events. Visible to the
+/// customer themselves on their Account → Security page (so they can spot
+/// unauthorised access) and to staff via Settings → Audit (cross-cutting view).
+/// Both customerUserId and customerId are indexed for the two main query
+/// patterns: "everything this user did" vs "everything any user from this
+/// customer did".
+model PortalAuditEvent {
+  id             String        @id @default(cuid())
+  customerUserId String?
+  user           CustomerUser? @relation(fields: [customerUserId], references: [id], onDelete: SetNull)
+  customerId     String? // nullable for events on deleted users
+  customer       Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  type           String // SIGN_IN, SIGN_IN_FAIL, 2FA_PASS, 2FA_FAIL, …
+  ip             String?
+  userAgent      String?
+  meta           Json? // free-form extras (e.g. "used_backup_code": true)
+  createdAt      DateTime      @default(now())
+
+  @@index([customerUserId, createdAt])
+  @@index([customerId, createdAt])
+  @@index([type, createdAt])
 }
